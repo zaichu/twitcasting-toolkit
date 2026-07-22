@@ -7,6 +7,7 @@ import {
   ExtensionMessage,
   ItemCandidate,
   ItemCandidateListResult,
+  ItemSendRequest,
   ItemSendResult
 } from "../extensionTypes";
 import { getSettings, saveCheckboxRule } from "../storage";
@@ -61,6 +62,204 @@ const formatCheckboxStatus = (state: CheckboxState | CheckboxActionResult | unde
   }
 
   return `${state.checked} / ${state.total} 件選択中`;
+};
+
+const runItemSendInMainWorld = async (
+  tabId: number,
+  request: ItemSendRequest,
+  host: string
+): Promise<ItemSendResult> => {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    args: [request, host],
+    func: async (sendRequest: ItemSendRequest, pageHost: string): Promise<ItemSendResult> => {
+      const maxItemSendCount = 20;
+      const sendButtonTimeoutMs = 10000;
+      const sendButtonPollMs = 100;
+
+      type GiftItemWindow = Window & {
+        giftItem?: (userId: string, itemId?: string, usePoint?: boolean) => unknown;
+      };
+
+      const wait = (ms: number): Promise<void> => {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      };
+
+      const clampCount = (count: number): number => {
+        return Math.max(1, Math.min(count, maxItemSendCount));
+      };
+
+      const clampDelay = (delayMs: number): number => {
+        return Math.max(300, Math.min(delayMs, 5000));
+      };
+
+      const isDisabledElement = (element: Element): boolean => {
+        if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement) {
+          return element.disabled;
+        }
+
+        return element.getAttribute("aria-disabled") === "true";
+      };
+
+      const isVisibleElement = (element: HTMLElement): boolean => {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          rect.width > 0 &&
+          rect.height > 0
+        );
+      };
+
+      const pressElement = (element: HTMLElement) => {
+        element.scrollIntoView?.({ block: "center", inline: "center" });
+        element.focus({ preventScroll: true });
+
+        const pointerOptions = {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 1,
+          pointerType: "mouse"
+        };
+        const mouseOptions = {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          buttons: 1
+        };
+        const PointerEventConstructor = globalThis.PointerEvent ?? MouseEvent;
+
+        element.dispatchEvent(new PointerEventConstructor("pointerdown", pointerOptions));
+        element.dispatchEvent(new MouseEvent("mousedown", mouseOptions));
+        element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
+        element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
+        element.click();
+      };
+
+      const getPointSendButton = (): HTMLElement | undefined => {
+        const selectors = [
+          '#tw-item-window-data .tw-item-send-post[data-sendable="true"] #messagelink',
+          "#tw-item-window-data #gift_form #messagelink",
+          "#gift_form #messagelink"
+        ];
+
+        return selectors
+          .map((selector) => document.querySelector<HTMLElement>(selector))
+          .find(
+            (element): element is HTMLElement =>
+              Boolean(element && !isDisabledElement(element) && isVisibleElement(element))
+          );
+      };
+
+      const waitForPointSendButton = async (): Promise<HTMLElement | undefined> => {
+        const startedAt = Date.now();
+
+        while (Date.now() - startedAt <= sendButtonTimeoutMs) {
+          const button = getPointSendButton();
+
+          if (button) {
+            return button;
+          }
+
+          await wait(sendButtonPollMs);
+        }
+
+        return undefined;
+      };
+
+      const findItemAnchor = (): HTMLElement | undefined => {
+        if (!sendRequest.itemId) {
+          return undefined;
+        }
+
+        const escapedItemId = sendRequest.itemId.replace(/["\\]/g, "\\$&");
+        const selectors = [
+          `a[href*="'${escapedItemId}'"][href*="giftItem("]`,
+          `a[href*="\\"${escapedItemId}\\""][href*="giftItem("]`
+        ];
+
+        return selectors
+          .map((selector) => document.querySelector<HTMLElement>(selector))
+          .find((element): element is HTMLElement =>
+            Boolean(element && !isDisabledElement(element))
+          );
+      };
+
+      const openGiftWindow = async (): Promise<boolean> => {
+        if (sendRequest.userId && sendRequest.itemId) {
+          const giftItem = (window as GiftItemWindow).giftItem;
+
+          if (typeof giftItem === "function") {
+            giftItem(sendRequest.userId, sendRequest.itemId, true);
+            return true;
+          }
+        }
+
+        const itemAnchor = findItemAnchor();
+
+        if (itemAnchor) {
+          pressElement(itemAnchor);
+          return true;
+        }
+
+        return false;
+      };
+
+      const count = clampCount(sendRequest.count);
+      const delayMs = clampDelay(sendRequest.delayMs);
+      const query = sendRequest.label ?? sendRequest.query ?? sendRequest.itemId ?? "";
+      let sent = 0;
+
+      for (let index = 0; index < count; index += 1) {
+        const opened = await openGiftWindow();
+
+        if (!opened) {
+          return {
+            host: pageHost,
+            query,
+            requested: count,
+            sent,
+            stoppedReason: "giftItem が見つからず、アイテム送信画面を開けませんでした"
+          };
+        }
+
+        const sendButton = await waitForPointSendButton();
+
+        if (!sendButton) {
+          return {
+            host: pageHost,
+            query,
+            requested: count,
+            sent,
+            stoppedReason: "ポイント送信ボタンが表示されませんでした"
+          };
+        }
+
+        pressElement(sendButton);
+        sent += 1;
+
+        if (index < count - 1) {
+          await wait(delayMs);
+        }
+      }
+
+      return {
+        host: pageHost,
+        query,
+        requested: count,
+        sent
+      };
+    }
+  });
+
+  if (!result?.result) {
+    throw new Error("MAIN world のアイテム送信結果を取得できませんでした");
+  }
+
+  return result.result;
 };
 
 export const App = () => {
@@ -212,21 +411,21 @@ export const App = () => {
     setItemResult(undefined);
 
     try {
-      const result = await sendToTab<ItemSendResult>(tab.id, {
-        feature: "item-sender",
-        type: "send",
-        request: {
+      const result = await runItemSendInMainWorld(
+        tab.id,
+        {
           candidateIndex: selectedItem.index,
           label: selectedItem.label,
           userId: selectedItem.userId,
           itemId: selectedItem.itemId,
           count: itemCount,
           delayMs: itemDelayMs
-        }
-      });
+        },
+        tab.host
+      );
       setItemResult(result);
-    } catch {
-      setError("アイテム送信操作に失敗しました。");
+    } catch (error) {
+      setError(`アイテム送信操作に失敗しました: ${String(error)}`);
     } finally {
       setBusy(false);
     }
