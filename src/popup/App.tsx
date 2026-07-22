@@ -5,7 +5,8 @@ import {
   CheckboxRule,
   CheckboxState,
   ExtensionMessage,
-  ItemPreviewResult,
+  ItemCandidate,
+  ItemCandidateListResult,
   ItemSendResult
 } from "../extensionTypes";
 import { getSettings, saveCheckboxRule } from "../storage";
@@ -70,10 +71,10 @@ export const App = () => {
     autoApply: false,
     action: "check"
   });
-  const [itemQuery, setItemQuery] = useState("");
+  const [itemCandidates, setItemCandidates] = useState<ItemCandidate[]>([]);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number>();
   const [itemCount, setItemCount] = useState(1);
   const [itemDelayMs, setItemDelayMs] = useState(700);
-  const [itemPreview, setItemPreview] = useState<ItemPreviewResult>();
   const [itemResult, setItemResult] = useState<ItemSendResult>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -85,7 +86,8 @@ export const App = () => {
 
     if (!activeTab) {
       setCheckboxState(undefined);
-      setItemPreview(undefined);
+      setItemCandidates([]);
+      setSelectedItemIndex(undefined);
       return;
     }
 
@@ -109,6 +111,43 @@ export const App = () => {
   useEffect(() => {
     void refresh();
   }, []);
+
+  const loadItemCandidates = async () => {
+    if (!tab) {
+      return;
+    }
+
+    setBusy(true);
+    setError(undefined);
+    setItemResult(undefined);
+
+    try {
+      const result = await sendToTab<ItemCandidateListResult>(tab.id, {
+        feature: "item-sender",
+        type: "list"
+      });
+      setItemCandidates(result.candidates);
+      setSelectedItemIndex((currentIndex) => {
+        if (result.candidates.some((candidate) => candidate.index === currentIndex)) {
+          return currentIndex;
+        }
+
+        return result.candidates[0]?.index;
+      });
+    } catch (error) {
+      setItemCandidates([]);
+      setSelectedItemIndex(undefined);
+      setError(`アイテム候補の取得に失敗しました: ${String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTool === "item-sender" && tab) {
+      void loadItemCandidates();
+    }
+  }, [activeTool, tab?.id]);
 
   const runCheckboxAction = async (action: CheckboxAction) => {
     if (!tab) {
@@ -153,36 +192,15 @@ export const App = () => {
     }
   };
 
-  const previewItem = async () => {
-    if (!tab || !itemQuery.trim()) {
-      return;
-    }
-
-    setBusy(true);
-    setError(undefined);
-    setItemResult(undefined);
-
-    try {
-      const result = await sendToTab<ItemPreviewResult>(tab.id, {
-        feature: "item-sender",
-        type: "preview",
-        query: itemQuery
-      });
-      setItemPreview(result);
-    } catch {
-      setError("アイテム候補の取得に失敗しました。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const sendItem = async () => {
-    if (!tab || !itemQuery.trim()) {
+    const selectedItem = itemCandidates.find((candidate) => candidate.index === selectedItemIndex);
+
+    if (!tab || !selectedItem) {
       return;
     }
 
     const confirmed = window.confirm(
-      `${itemQuery} を ${itemCount} 回クリックします。TwitCasting 側の確認画面や消費内容を必ず確認してください。`
+      `${selectedItem.label} を ${itemCount} 回クリックします。TwitCasting 側の確認画面や消費内容を必ず確認してください。`
     );
 
     if (!confirmed) {
@@ -198,7 +216,8 @@ export const App = () => {
         feature: "item-sender",
         type: "send",
         request: {
-          query: itemQuery,
+          candidateIndex: selectedItem.index,
+          label: selectedItem.label,
           count: itemCount,
           delayMs: itemDelayMs
         }
@@ -212,7 +231,7 @@ export const App = () => {
   };
 
   const checkboxDisabled = !tab || busy;
-  const itemDisabled = !tab || busy || !itemQuery.trim();
+  const itemDisabled = !tab || busy || selectedItemIndex === undefined;
 
   return (
     <main className="popup-shell">
@@ -328,13 +347,22 @@ export const App = () => {
       ) : (
         <section className="tool-panel" aria-label="アイテム送信補助">
           <label className="field">
-            <span>アイテム名</span>
-            <input
-              type="text"
-              value={itemQuery}
-              placeholder="例: お茶"
-              onChange={(event) => setItemQuery(event.currentTarget.value)}
-            />
+            <span>アイテム</span>
+            <select
+              value={selectedItemIndex ?? ""}
+              disabled={!tab || busy || itemCandidates.length === 0}
+              onChange={(event) => setSelectedItemIndex(Number(event.currentTarget.value))}
+            >
+              {itemCandidates.length === 0 ? (
+                <option value="">候補がありません</option>
+              ) : (
+                itemCandidates.map((candidate) => (
+                  <option key={`${candidate.index}-${candidate.label}`} value={candidate.index}>
+                    {candidate.label}
+                  </option>
+                ))
+              )}
+            </select>
           </label>
 
           <div className="field-grid">
@@ -362,28 +390,15 @@ export const App = () => {
           </div>
 
           <div className="actions two">
-            <button type="button" onClick={() => void previewItem()} disabled={itemDisabled}>
-              候補確認
+            <button type="button" onClick={() => void loadItemCandidates()} disabled={!tab || busy}>
+              再取得
             </button>
             <button type="button" onClick={() => void sendItem()} disabled={itemDisabled}>
               実行
             </button>
           </div>
 
-          {itemPreview && (
-            <div className="candidate-list">
-              <strong>候補 {itemPreview.candidates.length} 件</strong>
-              {itemPreview.candidates.length === 0 ? (
-                <p>一致する操作要素が見つかりません。</p>
-              ) : (
-                <ul>
-                  {itemPreview.candidates.map((candidate) => (
-                    <li key={`${candidate.index}-${candidate.label}`}>{candidate.label}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+          <p className="status">{itemCandidates.length} 件の候補を検出</p>
 
           {itemResult && (
             <p className="status">

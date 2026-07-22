@@ -1,6 +1,6 @@
 import type {
   ItemCandidate,
-  ItemPreviewResult,
+  ItemCandidateListResult,
   ItemSendRequest,
   ItemSendResult
 } from "../../extensionTypes";
@@ -46,9 +46,22 @@ const getInteractiveElements = (): HTMLElement[] => {
 };
 
 export const getElementLabel = (element: HTMLElement): string => {
+  const imageLabels = Array.from(element.querySelectorAll<HTMLImageElement>("img"))
+    .flatMap((image) => [image.alt, image.title, image.getAttribute("aria-label")])
+    .filter(Boolean);
+  const datasetLabels = Object.values(element.dataset).filter(Boolean);
+
   if (element instanceof HTMLInputElement) {
     return normalizeText(
-      [element.value, element.getAttribute("aria-label"), element.title].filter(Boolean).join(" ")
+      [
+        element.value,
+        element.getAttribute("aria-label"),
+        element.title,
+        ...imageLabels,
+        ...datasetLabels
+      ]
+        .filter(Boolean)
+        .join(" ")
     );
   }
 
@@ -57,12 +70,59 @@ export const getElementLabel = (element: HTMLElement): string => {
       element.textContent ?? "",
       element.getAttribute("aria-label"),
       element.title,
-      element.dataset.itemName,
-      element.dataset.name
+      ...imageLabels,
+      ...datasetLabels
     ]
       .filter(Boolean)
       .join(" ")
   );
+};
+
+const getAllItemCandidates = (): Array<ItemCandidate & { element: HTMLElement }> => {
+  return getInteractiveElements()
+    .map((element, index) => ({
+      index,
+      element,
+      label: getElementLabel(element)
+    }))
+    .filter((candidate) => candidate.label.length > 0);
+};
+
+export const listItemCandidates = (): ItemCandidateListResult => {
+  const candidates = getAllItemCandidates()
+    .slice(0, 80)
+    .map(({ index, label }) => ({ index, label }));
+
+  return {
+    host: window.location.host,
+    candidates
+  };
+};
+
+const pressElement = (element: HTMLElement) => {
+  element.scrollIntoView?.({ block: "center", inline: "center" });
+  element.focus({ preventScroll: true });
+
+  const pointerOptions = {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 1,
+    pointerType: "mouse"
+  };
+  const mouseOptions = {
+    bubbles: true,
+    cancelable: true,
+    button: 0,
+    buttons: 1
+  };
+
+  const PointerEventConstructor = globalThis.PointerEvent ?? MouseEvent;
+
+  element.dispatchEvent(new PointerEventConstructor("pointerdown", pointerOptions));
+  element.dispatchEvent(new MouseEvent("mousedown", mouseOptions));
+  element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
+  element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
+  element.dispatchEvent(new MouseEvent("click", mouseOptions));
 };
 
 export const findItemCandidates = (
@@ -74,46 +134,48 @@ export const findItemCandidates = (
     return [];
   }
 
-  return getInteractiveElements()
-    .map((element, index) => ({
-      index,
-      element,
-      label: getElementLabel(element)
-    }))
-    .filter((candidate) => candidate.label.toLowerCase().includes(normalizedQuery));
-};
-
-export const previewItemCandidates = (query: string): ItemPreviewResult => {
-  const candidates = findItemCandidates(query)
-    .slice(0, 8)
-    .map(({ index, label }) => ({ index, label }));
-
-  return {
-    host: window.location.host,
-    query,
-    candidates
-  };
+  return getAllItemCandidates().filter((candidate) =>
+    candidate.label.toLowerCase().includes(normalizedQuery)
+  );
 };
 
 export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResult> => {
   const count = clampItemSendCount(request.count);
   const delayMs = clampItemSendDelay(request.delayMs);
+  const query = request.label ?? request.query ?? "";
+  const candidates = getAllItemCandidates();
+  const candidateByIndex =
+    typeof request.candidateIndex === "number"
+      ? candidates.find((item) => item.index === request.candidateIndex)
+      : undefined;
+  const candidate =
+    candidateByIndex && (!request.label || candidateByIndex.label === request.label)
+      ? candidateByIndex
+      : candidates.find((item) => item.label === request.label) ?? findItemCandidates(query)[0];
   let sent = 0;
 
-  for (let index = 0; index < count; index += 1) {
-    const [candidate] = findItemCandidates(request.query);
+  if (!candidate) {
+    return {
+      host: window.location.host,
+      query,
+      requested: count,
+      sent,
+      stoppedReason: "候補が見つかりませんでした"
+    };
+  }
 
-    if (!candidate) {
+  for (let index = 0; index < count; index += 1) {
+    if (!candidate.element.isConnected || isDisabledElement(candidate.element)) {
       return {
         host: window.location.host,
-        query: request.query,
+        query,
         requested: count,
         sent,
-        stoppedReason: "候補が見つかりませんでした"
+        stoppedReason: "候補が操作できない状態になりました"
       };
     }
 
-    candidate.element.click();
+    pressElement(candidate.element);
     sent += 1;
 
     if (index < count - 1) {
@@ -123,7 +185,7 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
 
   return {
     host: window.location.host,
-    query: request.query,
+    query,
     requested: count,
     sent
   };

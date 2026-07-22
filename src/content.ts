@@ -3,11 +3,11 @@ import type {
   CheckboxRule,
   CheckboxState,
   ExtensionMessage,
-  ItemPreviewResult,
+  ItemCandidateListResult,
   ItemSendResult
 } from "./extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "./features/checkbox/checkboxTools";
-import { previewItemCandidates, sendItems } from "./features/itemSender/itemSender";
+import { listItemCandidates, sendItems } from "./features/itemSender/itemSender";
 
 const CONTENT_SETTINGS_KEY = "twitCastingToolkitSettings";
 
@@ -58,7 +58,7 @@ const handleMessage = (
   message: ExtensionMessage,
   _sender: chrome.runtime.MessageSender,
   sendResponse: (
-    response: CheckboxState | CheckboxActionResult | ItemPreviewResult | ItemSendResult
+    response: CheckboxState | CheckboxActionResult | ItemCandidateListResult | ItemSendResult
   ) => void
 ) => {
   if (message.feature === "checkbox") {
@@ -76,8 +76,8 @@ const handleMessage = (
     return true;
   }
 
-  if (message.type === "preview") {
-    sendResponse(previewItemCandidates(message.query));
+  if (message.type === "list") {
+    sendResponse(listItemCandidates());
     return false;
   }
 

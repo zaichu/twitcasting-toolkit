@@ -4,8 +4,8 @@ import {
   clampItemSendDelay,
   findItemCandidates,
   getElementLabel,
+  listItemCandidates,
   normalizeText,
-  previewItemCandidates,
   sendItems
 } from "./itemSender";
 
@@ -25,13 +25,13 @@ describe("itemSender", () => {
 
   it("builds labels from common interactive element attributes", () => {
     document.body.innerHTML = `
-      <button data-item-name="お茶">送る</button>
+      <button data-item-name="お茶"><img alt="コンティニューコイン 50" />送る</button>
       <input type="button" value="拍手" aria-label="アイテム" />
     `;
 
     const [button, input] = Array.from(document.querySelectorAll<HTMLElement>("button, input"));
 
-    expect(getElementLabel(button)).toBe("送る お茶");
+    expect(getElementLabel(button)).toBe("送る コンティニューコイン 50 お茶");
     expect(getElementLabel(input)).toBe("拍手 アイテム");
   });
 
@@ -45,10 +45,21 @@ describe("itemSender", () => {
 
     expect(findItemCandidates("お茶")).toHaveLength(1);
     expect(findItemCandidates("拍手")).toHaveLength(1);
-    expect(previewItemCandidates("お茶")).toMatchObject({
+    expect(findItemCandidates("お茶")[0]).toMatchObject({ index: 0, label: "送る お茶" });
+  });
+
+  it("lists selectable candidates without text input", () => {
+    document.body.innerHTML = `
+      <button data-item-name="コンティニューコイン 50">送る</button>
+      <a href="/x" aria-label="お茶">link</a>
+    `;
+
+    expect(listItemCandidates()).toMatchObject({
       host: "twitcasting.tv",
-      query: "お茶",
-      candidates: [{ index: 0, label: "送る お茶" }]
+      candidates: [
+        { index: 0, label: "送る コンティニューコイン 50" },
+        { index: 1, label: "link お茶" }
+      ]
     });
   });
 
@@ -68,6 +79,37 @@ describe("itemSender", () => {
       sent: 20
     });
     expect(onClick).toHaveBeenCalledTimes(20);
+
+    vi.useRealTimers();
+  });
+
+  it("clicks a selected candidate by index", async () => {
+    vi.useFakeTimers();
+    const onTeaClick = vi.fn();
+    const onCoinClick = vi.fn();
+    document.body.innerHTML = `
+      <button data-item-name="お茶">送る</button>
+      <button data-item-name="コンティニューコイン 50">送る</button>
+    `;
+    const [teaButton, coinButton] = Array.from(document.querySelectorAll("button"));
+    teaButton.addEventListener("click", onTeaClick);
+    coinButton.addEventListener("click", onCoinClick);
+
+    const resultPromise = sendItems({
+      candidateIndex: 1,
+      label: "送る コンティニューコイン 50",
+      count: 2,
+      delayMs: 300
+    });
+    await vi.runAllTimersAsync();
+
+    await expect(resultPromise).resolves.toMatchObject({
+      query: "送る コンティニューコイン 50",
+      requested: 2,
+      sent: 2
+    });
+    expect(onTeaClick).not.toHaveBeenCalled();
+    expect(onCoinClick).toHaveBeenCalledTimes(2);
 
     vi.useRealTimers();
   });
