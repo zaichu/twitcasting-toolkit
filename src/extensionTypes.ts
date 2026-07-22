@@ -27,14 +27,15 @@ export type ItemCandidate = {
   label: string;
 };
 
-export type ItemPreviewResult = {
+export type ItemCandidateListResult = {
   host: string;
-  query: string;
   candidates: ItemCandidate[];
 };
 
 export type ItemSendRequest = {
-  query: string;
+  candidateIndex?: number;
+  label?: string;
+  query?: string;
   count: number;
   delayMs: number;
 };
@@ -63,8 +64,7 @@ export type ExtensionMessage =
     }
   | {
       feature: "item-sender";
-      type: "preview";
-      query: string;
+      type: "list";
     }
   | {
       feature: "item-sender";

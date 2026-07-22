@@ -15,7 +15,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -216,7 +217,8 @@ input:disabled {
   gap: 10px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 38px;
   border: 1px solid #cfd7d1;
