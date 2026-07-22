@@ -4,7 +4,7 @@
   "description": "TwitCasting の操作を補助するためのツール群です。",
   "version": "2.0.0",
   "manifest_version": 3,
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://twitcasting.tv/*", "https://*.twitcasting.tv/*"],
   "content_scripts": [
     {
