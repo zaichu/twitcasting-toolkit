@@ -60,8 +60,8 @@ type ItemCandidateWithSource = ItemCandidate & {
   element?: HTMLElement;
 };
 
-const getTwitCastingItemElements = (): HTMLElement[] => {
-  return Array.from(document.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
+const getTwitCastingItemElements = (root: ParentNode = document): HTMLElement[] => {
+  return Array.from(root.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
     (element) => !isDisabledElement(element)
   );
 };
@@ -121,8 +121,8 @@ export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefine
   };
 };
 
-const getDomItemCandidates = (): ItemCandidateWithSource[] => {
-  return getTwitCastingItemElements()
+const getDomItemCandidates = (root: ParentNode = document): ItemCandidateWithSource[] => {
+  return getTwitCastingItemElements(root)
     .map((element, index) => {
       const giftItemCall = parseGiftItemCall(element);
 
@@ -155,6 +155,55 @@ const parsePageVariableUserId = (): string | undefined => {
     return typeof data.broadcaster_id === "string" ? data.broadcaster_id : undefined;
   } catch {
     return undefined;
+  }
+};
+
+const getTargetUserId = (): string | undefined => {
+  return (
+    parsePageVariableUserId() ??
+    document.querySelector<HTMLElement>("#tw-item-window")?.dataset.targetUserId ??
+    document.querySelector<HTMLElement>(".tw-user-header")?.dataset.userId ??
+    document.querySelector<HTMLElement>(".tw-next-watch-list")?.dataset.userId
+  );
+};
+
+const getAjaxItemListCandidates = async (): Promise<ItemCandidateWithSource[]> => {
+  const userId = getTargetUserId();
+
+  if (!userId) {
+    return [];
+  }
+
+  const params = new URLSearchParams();
+  params.set("c", "sendgift");
+  params.set("tuser", userId);
+
+  try {
+    const response = await fetch(`/gearajax.php?${params.toString()}`, {
+      credentials: "include",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const html = await response.text();
+
+    if (!html.includes("tw-item-list-item")) {
+      return [];
+    }
+
+    const parsedDocument = new DOMParser().parseFromString(html, "text/html");
+
+    return getDomItemCandidates(parsedDocument).map((candidate, index) => ({
+      ...candidate,
+      index
+    }));
+  } catch {
+    return [];
   }
 };
 
@@ -323,8 +372,9 @@ const getAllItemCandidates = (): ItemCandidateWithSource[] => {
   return domCandidates.length > 0 ? domCandidates : getEmbeddedItemBoxCandidates();
 };
 
-export const listItemCandidates = (): ItemCandidateListResult => {
-  const candidates = getAllItemCandidates()
+export const listItemCandidates = async (): Promise<ItemCandidateListResult> => {
+  const ajaxCandidates = await getAjaxItemListCandidates();
+  const candidates = (ajaxCandidates.length > 0 ? ajaxCandidates : getAllItemCandidates())
     .slice(0, 80)
     .map(({ index, label, userId, itemId, point }) => ({ index, label, userId, itemId, point }));
 
