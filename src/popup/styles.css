@@ -10,7 +10,7 @@
 }
 
 body {
-  min-width: 360px;
+  min-width: 390px;
   margin: 0;
 }
 
@@ -23,7 +23,7 @@ select {
 .popup-shell {
   display: grid;
   gap: 14px;
-  width: 360px;
+  width: 390px;
   padding: 16px;
 }
 
@@ -231,17 +231,17 @@ input:disabled {
 .item-picker {
   display: grid;
   gap: 6px;
-  max-height: 188px;
+  max-height: 312px;
   overflow: auto;
 }
 
 .item-picker button {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 46px;
+  min-height: 54px;
   border: 1px solid #cfd7d1;
   border-radius: 7px;
   padding: 6px 10px 6px 6px;
@@ -264,8 +264,8 @@ input:disabled {
 .item-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border: 1px solid #dce2dd;
   border-radius: 7px;
   background: #f7f8f5;
@@ -273,8 +273,8 @@ input:disabled {
 }
 
 .item-icon img {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
 }
 
