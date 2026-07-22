@@ -398,14 +398,6 @@ export const App = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      `${selectedItem.label} を ${itemCount} 回クリックします。TwitCasting 側の確認画面や消費内容を必ず確認してください。`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setBusy(true);
     setError(undefined);
     setItemResult(undefined);
