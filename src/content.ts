@@ -77,8 +77,8 @@ const handleMessage = (
   }
 
   if (message.type === "list") {
-    sendResponse(listItemCandidates());
-    return false;
+    listItemCandidates().then(sendResponse);
+    return true;
   }
 
   sendItems(message.request).then(sendResponse);

@@ -12,6 +12,8 @@ import {
 
 describe("itemSender", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/example");
   });
@@ -42,21 +44,21 @@ describe("itemSender", () => {
     expect(getElementLabel(item)).toBe("コンティニューコイン 50");
   });
 
-  it("does not list sidebar or unrelated interactive elements", () => {
+  it("does not list sidebar or unrelated interactive elements", async () => {
     document.body.innerHTML = `
       <button>サイドバー</button>
       <a href="/search">検索する</a>
       <div role="button">通知リスト</div>
     `;
 
-    expect(listItemCandidates()).toMatchObject({
+    expect(await listItemCandidates()).toMatchObject({
       host: "twitcasting.tv",
       candidates: []
     });
     expect(findItemCandidates("サイドバー")).toHaveLength(0);
   });
 
-  it("lists selectable TwitCasting item candidates without text input", () => {
+  it("lists selectable TwitCasting item candidates without text input", async () => {
     document.body.innerHTML = `
       <div class="tw-item-list">
         <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
@@ -73,7 +75,7 @@ describe("itemSender", () => {
       </div>
     `;
 
-    expect(listItemCandidates()).toMatchObject({
+    expect(await listItemCandidates()).toMatchObject({
       host: "twitcasting.tv",
       candidates: [
         { index: 0, label: "コンティニューコイン 50" },
@@ -82,7 +84,7 @@ describe("itemSender", () => {
     });
   });
 
-  it("lists embedded TwitCasting items before the page item list is opened", () => {
+  it("lists embedded TwitCasting items before the page item list is opened", async () => {
     document.body.innerHTML = `
       <script>
         window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
@@ -103,7 +105,7 @@ describe("itemSender", () => {
       </script>
     `;
 
-    expect(listItemCandidates()).toMatchObject({
+    expect(await listItemCandidates()).toMatchObject({
       host: "twitcasting.tv",
       candidates: [
         {
@@ -121,6 +123,74 @@ describe("itemSender", () => {
           point: 100
         }
       ]
+    });
+  });
+
+  it("loads the hidden TwitCasting item list from gearajax before falling back to embedded items", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              { "item_id": "coin", "name": "コンティニューコイン", "point": 50 }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div class="tw-item-list">
+            <a href="javascript:giftItem('c:studying777', 'clap', true);" class="tw-item-list-item">
+              <span class="tw-item-list-item-name">拍手</span>
+              <span class="tw-item-list-item-amount">15</span>
+            </a>
+            <a href="javascript:giftItem('c:studying777', 'coin_baku5', true);" class="tw-item-list-item">
+              <span class="tw-item-list-item-name">コンティニューコイン爆</span>
+              <span class="tw-item-list-item-amount">250</span>
+            </a>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      host: "twitcasting.tv",
+      candidates: [
+        {
+          index: 0,
+          label: "拍手 15",
+          userId: "c:studying777",
+          itemId: "clap",
+          point: 15
+        },
+        {
+          index: 1,
+          label: "コンティニューコイン爆 250",
+          userId: "c:studying777",
+          itemId: "coin_baku5",
+          point: 250
+        }
+      ]
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/gearajax.php?c=sendgift&tuser=c%3Astudying777", {
+      credentials: "include",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
     });
   });
 
