@@ -93,8 +93,18 @@ describe("itemSender", () => {
           "https://frontendapi.twitcasting.tv",
           {
             "items": [
-              { "item_id": "coin", "name": "コンティニューコイン", "point": 50 },
-              { "item_id": "tea.baku", "name": "お茶ｘ10", "point": 100 }
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              },
+              {
+                "item_id": "tea.baku",
+                "name": "お茶ｘ10",
+                "point": 100,
+                "image_url": "/img/item_tea_10.summer.png"
+              }
             ],
             "paid_gifts": []
           },
@@ -113,14 +123,16 @@ describe("itemSender", () => {
           label: "コンティニューコイン 50",
           userId: "c:studying777",
           itemId: "coin",
-          point: 50
+          point: 50,
+          imageUrl: "https://twitcasting.tv/img/item_coin.png"
         },
         {
           index: 1,
           label: "お茶ｘ10 100",
           userId: "c:studying777",
           itemId: "tea.baku",
-          point: 100
+          point: 100,
+          imageUrl: "https://twitcasting.tv/img/item_tea_10.summer.png"
         }
       ]
     });
@@ -138,7 +150,12 @@ describe("itemSender", () => {
           "https://frontendapi.twitcasting.tv",
           {
             "items": [
-              { "item_id": "coin", "name": "コンティニューコイン", "point": 50 }
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
             ],
             "paid_gifts": []
           },
@@ -153,10 +170,12 @@ describe("itemSender", () => {
         `
           <div class="tw-item-list">
             <a href="javascript:giftItem('c:studying777', 'clap', true);" class="tw-item-list-item">
+              <img class="tw-item-list-item-icon" src="/img/item_clap.png" alt="拍手">
               <span class="tw-item-list-item-name">拍手</span>
               <span class="tw-item-list-item-amount">15</span>
             </a>
             <a href="javascript:giftItem('c:studying777', 'coin_baku5', true);" class="tw-item-list-item">
+              <img class="tw-item-list-item-icon" src="/img/item_coin_baku5.png" alt="コンティニューコイン爆">
               <span class="tw-item-list-item-name">コンティニューコイン爆</span>
               <span class="tw-item-list-item-amount">250</span>
             </a>
@@ -175,14 +194,16 @@ describe("itemSender", () => {
           label: "拍手 15",
           userId: "c:studying777",
           itemId: "clap",
-          point: 15
+          point: 15,
+          imageUrl: "https://twitcasting.tv/img/item_clap.png"
         },
         {
           index: 1,
           label: "コンティニューコイン爆 250",
           userId: "c:studying777",
           itemId: "coin_baku5",
-          point: 250
+          point: 250,
+          imageUrl: "https://twitcasting.tv/img/item_coin_baku5.png"
         }
       ]
     });

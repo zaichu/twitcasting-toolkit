@@ -50,6 +50,7 @@ type EmbeddedItemBoxItem = {
   item_id?: unknown;
   name?: unknown;
   point?: unknown;
+  image_url?: unknown;
 };
 
 type EmbeddedItemBoxData = {
@@ -99,6 +100,26 @@ const getPointFromText = (text: string): number | undefined => {
   return match ? Number(match[0]) : undefined;
 };
 
+const toAbsoluteUrl = (url: string | undefined): string | undefined => {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    return new URL(url, window.location.origin).href;
+  } catch {
+    return undefined;
+  }
+};
+
+const getTwitCastingItemImageUrl = (element: HTMLElement): string | undefined => {
+  return toAbsoluteUrl(
+    element.querySelector<HTMLImageElement>(".tw-item-list-item-icon")?.getAttribute("src") ??
+      element.querySelector<HTMLImageElement>("img")?.getAttribute("src") ??
+      undefined
+  );
+};
+
 export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefined => {
   const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
 
@@ -134,7 +155,8 @@ const getDomItemCandidates = (root: ParentNode = document): ItemCandidateWithSou
         itemId: giftItemCall?.itemId,
         point: getPointFromText(
           element.querySelector<HTMLElement>(".tw-item-list-item-amount")?.textContent ?? ""
-        )
+        ),
+        imageUrl: getTwitCastingItemImageUrl(element)
       };
     })
     .filter((candidate) => candidate.label.length > 0);
@@ -325,6 +347,7 @@ const parseEmbeddedItemBoxCandidatesFromScript = (
         const itemId = typeof item.item_id === "string" ? item.item_id : undefined;
         const name = typeof item.name === "string" ? normalizeText(item.name) : "";
         const point = typeof item.point === "number" ? item.point : undefined;
+        const imageUrl = typeof item.image_url === "string" ? toAbsoluteUrl(item.image_url) : undefined;
 
         if (!itemId || !name) {
           return undefined;
@@ -335,7 +358,8 @@ const parseEmbeddedItemBoxCandidatesFromScript = (
           label: normalizeText([name, point].filter((value) => value !== undefined).join(" ")),
           userId,
           itemId,
-          point
+          point,
+          imageUrl
         };
       })
       .filter((candidate): candidate is ItemCandidateWithSource => Boolean(candidate));
@@ -376,7 +400,14 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
   const ajaxCandidates = await getAjaxItemListCandidates();
   const candidates = (ajaxCandidates.length > 0 ? ajaxCandidates : getAllItemCandidates())
     .slice(0, 80)
-    .map(({ index, label, userId, itemId, point }) => ({ index, label, userId, itemId, point }));
+    .map(({ index, label, userId, itemId, point, imageUrl }) => ({
+      index,
+      label,
+      userId,
+      itemId,
+      point,
+      imageUrl
+    }));
 
   return {
     host: window.location.host,
