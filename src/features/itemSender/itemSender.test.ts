@@ -6,6 +6,7 @@ import {
   getElementLabel,
   listItemCandidates,
   normalizeText,
+  parseGiftItemCall,
   sendItems
 } from "./itemSender";
 
@@ -23,49 +24,40 @@ describe("itemSender", () => {
     expect(clampItemSendDelay(7000)).toBe(5000);
   });
 
-  it("builds labels from common interactive element attributes", () => {
+  it("builds labels from TwitCasting item DOM", () => {
     document.body.innerHTML = `
-      <button data-item-name="お茶"><img alt="コンティニューコイン 50" />送る</button>
-      <input type="button" value="拍手" aria-label="アイテム" />
+      <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+        <img class="tw-item-list-item-icon" src="/img/item_coin.png" alt="コンティニューコイン" />
+        <span class="tw-item-list-item-name">コンティニューコイン</span>
+        <span class="tw-item-list-item-amount"><img src="/img/icon_point.png" alt="" /> 50</span>
+      </a>
     `;
 
-    const [button, input] = Array.from(document.querySelectorAll<HTMLElement>("button, input"));
+    const item = document.querySelector<HTMLElement>(".tw-item-list-item");
 
-    expect(getElementLabel(button)).toBe("送る コンティニューコイン 50 お茶");
-    expect(getElementLabel(input)).toBe("拍手 アイテム");
+    if (!item) {
+      throw new Error("item was not rendered");
+    }
+
+    expect(getElementLabel(item)).toBe("コンティニューコイン 50");
   });
 
-  it("finds enabled matching item candidates", () => {
+  it("does not list sidebar or unrelated interactive elements", () => {
     document.body.innerHTML = `
-      <button data-item-name="お茶">送る</button>
-      <button disabled>お茶</button>
-      <a href="/x" aria-label="拍手">link</a>
-      <div role="button" aria-disabled="true">お茶</div>
-    `;
-
-    expect(findItemCandidates("お茶")).toHaveLength(1);
-    expect(findItemCandidates("拍手")).toHaveLength(1);
-    expect(findItemCandidates("お茶")[0]).toMatchObject({ index: 0, label: "送る お茶" });
-  });
-
-  it("lists selectable candidates without text input", () => {
-    document.body.innerHTML = `
-      <button data-item-name="コンティニューコイン 50">送る</button>
-      <a href="/x" aria-label="お茶">link</a>
+      <button>サイドバー</button>
+      <a href="/search">検索する</a>
+      <div role="button">通知リスト</div>
     `;
 
     expect(listItemCandidates()).toMatchObject({
       host: "twitcasting.tv",
-      candidates: [
-        { index: 0, label: "送る コンティニューコイン 50" },
-        { index: 1, label: "link お茶" }
-      ]
+      candidates: []
     });
+    expect(findItemCandidates("サイドバー")).toHaveLength(0);
   });
 
-  it("prefers TwitCasting item list candidates", () => {
+  it("lists selectable TwitCasting item candidates without text input", () => {
     document.body.innerHTML = `
-      <button data-item-name="無関係">送る</button>
       <div class="tw-item-list">
         <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
           <div class="tw-item-list-item-icon-container">
@@ -90,6 +82,25 @@ describe("itemSender", () => {
     });
   });
 
+  it("parses TwitCasting giftItem href", () => {
+    document.body.innerHTML = `
+      <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+        <span class="tw-item-list-item-name">コンティニューコイン</span>
+      </a>
+    `;
+    const item = document.querySelector<HTMLElement>(".tw-item-list-item");
+
+    if (!item) {
+      throw new Error("item was not rendered");
+    }
+
+    expect(parseGiftItemCall(item)).toEqual({
+      userId: "c:studying777",
+      itemId: "coin",
+      usePoint: true
+    });
+  });
+
   it("clicks matching candidates with a clamped maximum count", async () => {
     vi.useFakeTimers();
     const onItemClick = vi.fn(() => {
@@ -107,8 +118,16 @@ describe("itemSender", () => {
       document.querySelector("#messagelink")?.addEventListener("click", onSendClick);
     });
     const onSendClick = vi.fn((event: Event) => event.preventDefault());
-    document.body.innerHTML = '<button data-item-name="お茶">送る</button>';
-    document.querySelector("button")?.addEventListener("click", onItemClick);
+    document.body.innerHTML = `
+      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
+        <span class="tw-item-list-item-name">お茶</span>
+        <span class="tw-item-list-item-amount">10</span>
+      </a>
+    `;
+    document.querySelector("a")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      onItemClick();
+    });
 
     const resultPromise = sendItems({ query: "お茶", count: 25, delayMs: 1 });
     await vi.runAllTimersAsync();
@@ -143,23 +162,32 @@ describe("itemSender", () => {
     });
     const onSendClick = vi.fn((event: Event) => event.preventDefault());
     document.body.innerHTML = `
-      <button data-item-name="お茶">送る</button>
-      <button data-item-name="コンティニューコイン 50">送る</button>
+      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
+        <span class="tw-item-list-item-name">お茶</span>
+        <span class="tw-item-list-item-amount">10</span>
+      </a>
+      <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+        <span class="tw-item-list-item-name">コンティニューコイン</span>
+        <span class="tw-item-list-item-amount">50</span>
+      </a>
     `;
-    const [teaButton, coinButton] = Array.from(document.querySelectorAll("button"));
+    const [teaButton, coinButton] = Array.from(document.querySelectorAll("a"));
     teaButton.addEventListener("click", onTeaClick);
-    coinButton.addEventListener("click", onCoinClick);
+    coinButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      onCoinClick();
+    });
 
     const resultPromise = sendItems({
       candidateIndex: 1,
-      label: "送る コンティニューコイン 50",
+      label: "コンティニューコイン 50",
       count: 2,
       delayMs: 300
     });
     await vi.runAllTimersAsync();
 
     await expect(resultPromise).resolves.toMatchObject({
-      query: "送る コンティニューコイン 50",
+      query: "コンティニューコイン 50",
       requested: 2,
       sent: 2
     });
@@ -218,7 +246,13 @@ describe("itemSender", () => {
 
   it("stops when the point send button is not shown", async () => {
     vi.useFakeTimers();
-    document.body.innerHTML = '<button data-item-name="お茶">送る</button>';
+    document.body.innerHTML = `
+      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
+        <span class="tw-item-list-item-name">お茶</span>
+        <span class="tw-item-list-item-amount">10</span>
+      </a>
+    `;
+    document.querySelector("a")?.addEventListener("click", (event) => event.preventDefault());
 
     const resultPromise = sendItems({ query: "お茶", count: 1, delayMs: 300 });
     await vi.runAllTimersAsync();

@@ -6,6 +6,7 @@ import type {
 } from "../../extensionTypes";
 
 const MAX_ITEM_SEND_COUNT = 20;
+const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
 const SEND_BUTTON_TIMEOUT_MS = 5000;
 const SEND_BUTTON_POLL_MS = 100;
 
@@ -39,28 +40,14 @@ const twitCastingItemSelector = [
   'a[href^="javascript:giftItem("]'
 ].join(",");
 
-const getTwitCastingItemElements = (): HTMLElement[] => {
-  return Array.from(document.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
-    (element) => !isDisabledElement(element)
-  );
+type GiftItemCall = {
+  userId: string;
+  itemId: string;
+  usePoint: boolean;
 };
 
-const getInteractiveElements = (): HTMLElement[] => {
-  const twitCastingItems = getTwitCastingItemElements();
-
-  if (twitCastingItems.length > 0) {
-    return twitCastingItems;
-  }
-
-  const selector = [
-    "button",
-    "a[href]",
-    '[role="button"]',
-    'input[type="button"]',
-    'input[type="submit"]'
-  ].join(",");
-
-  return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(
+const getTwitCastingItemElements = (): HTMLElement[] => {
+  return Array.from(document.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
     (element) => !isDisabledElement(element)
   );
 };
@@ -89,40 +76,11 @@ export const getElementLabel = (element: HTMLElement): string => {
     return twitCastingItemLabel;
   }
 
-  const imageLabels = Array.from(element.querySelectorAll<HTMLImageElement>("img"))
-    .flatMap((image) => [image.alt, image.title, image.getAttribute("aria-label")])
-    .filter(Boolean);
-  const datasetLabels = Object.values(element.dataset).filter(Boolean);
-
-  if (element instanceof HTMLInputElement) {
-    return normalizeText(
-      [
-        element.value,
-        element.getAttribute("aria-label"),
-        element.title,
-        ...imageLabels,
-        ...datasetLabels
-      ]
-        .filter(Boolean)
-        .join(" ")
-    );
-  }
-
-  return normalizeText(
-    [
-      element.textContent ?? "",
-      element.getAttribute("aria-label"),
-      element.title,
-      ...imageLabels,
-      ...datasetLabels
-    ]
-      .filter(Boolean)
-      .join(" ")
-  );
+  return "";
 };
 
 const getAllItemCandidates = (): Array<ItemCandidate & { element: HTMLElement }> => {
-  return getInteractiveElements()
+  return getTwitCastingItemElements()
     .map((element, index) => ({
       index,
       element,
@@ -166,6 +124,91 @@ const pressElement = (element: HTMLElement) => {
   element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
   element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
   element.click();
+};
+
+export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefined => {
+  const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
+
+  if (!href) {
+    return undefined;
+  }
+
+  const match = href.match(
+    /giftItem\(\s*(['"])(.*?)\1\s*,\s*(['"])(.*?)\3\s*,\s*(true|false)\s*\)/
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  return {
+    userId: match[2],
+    itemId: match[4],
+    usePoint: match[5] === "true"
+  };
+};
+
+const callGiftItemInPage = (giftItemCall: GiftItemCall): Promise<boolean> => {
+  const eventName = `twitcasting-toolkit:gift-item:${Date.now()}:${Math.random()}`;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      document.removeEventListener(eventName, handleResult);
+      resolve(false);
+    }, GIFT_ITEM_CALL_TIMEOUT_MS);
+
+    const handleResult = (event: Event) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearTimeout(timeoutId);
+      document.removeEventListener(eventName, handleResult);
+      const detail = (event as CustomEvent<{ ok: boolean }>).detail;
+      resolve(Boolean(detail?.ok));
+    };
+
+    document.addEventListener(eventName, handleResult, { once: true });
+
+    const script = document.createElement("script");
+    script.textContent = `
+      (() => {
+        const eventName = ${JSON.stringify(eventName)};
+        const args = ${JSON.stringify(giftItemCall)};
+        try {
+          if (typeof giftItem !== "function") {
+            throw new Error("giftItem is not available");
+          }
+          giftItem(args.userId, args.itemId, args.usePoint);
+          document.dispatchEvent(new CustomEvent(eventName, { detail: { ok: true } }));
+        } catch (error) {
+          document.dispatchEvent(new CustomEvent(eventName, {
+            detail: { ok: false, message: String(error) }
+          }));
+        }
+      })();
+    `;
+    document.documentElement.append(script);
+    script.remove();
+  });
+};
+
+const openGiftItemWindow = async (element: HTMLElement): Promise<boolean> => {
+  const giftItemCall = parseGiftItemCall(element);
+
+  if (giftItemCall && (await callGiftItemInPage(giftItemCall))) {
+    return true;
+  }
+
+  pressElement(element);
+  return true;
 };
 
 const getPointSendButton = (): HTMLElement | undefined => {
@@ -246,7 +289,7 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
       };
     }
 
-    pressElement(candidate.element);
+    await openGiftItemWindow(candidate.element);
 
     const sendButton = await waitForPointSendButton();
 
