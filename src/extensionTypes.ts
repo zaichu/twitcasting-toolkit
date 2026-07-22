@@ -28,6 +28,7 @@ export type ItemCandidate = {
   userId?: string;
   itemId?: string;
   point?: number;
+  imageUrl?: string;
 };
 
 export type ItemCandidateListResult = {

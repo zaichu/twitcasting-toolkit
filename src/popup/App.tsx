@@ -539,24 +539,36 @@ export const App = () => {
         </section>
       ) : (
         <section className="tool-panel" aria-label="アイテム送信補助">
-          <label className="field">
+          <div className="field">
             <span>アイテム</span>
-            <select
-              value={selectedItemIndex ?? ""}
-              disabled={!tab || busy || itemCandidates.length === 0}
-              onChange={(event) => setSelectedItemIndex(Number(event.currentTarget.value))}
-            >
+            <div className="item-picker" role="listbox" aria-label="アイテム">
               {itemCandidates.length === 0 ? (
-                <option value="">候補がありません</option>
+                <p className="empty-list">候補がありません</p>
               ) : (
                 itemCandidates.map((candidate) => (
-                  <option key={`${candidate.index}-${candidate.label}`} value={candidate.index}>
-                    {candidate.label}
-                  </option>
+                  <button
+                    key={`${candidate.index}-${candidate.itemId ?? candidate.label}`}
+                    type="button"
+                    className={candidate.index === selectedItemIndex ? "selected" : ""}
+                    disabled={!tab || busy}
+                    aria-pressed={candidate.index === selectedItemIndex}
+                    role="option"
+                    aria-selected={candidate.index === selectedItemIndex}
+                    onClick={() => setSelectedItemIndex(candidate.index)}
+                  >
+                    <span className="item-icon" aria-hidden="true">
+                      {candidate.imageUrl ? (
+                        <img src={candidate.imageUrl} alt="" />
+                      ) : (
+                        <span>{candidate.label.slice(0, 1)}</span>
+                      )}
+                    </span>
+                    <span className="item-label">{candidate.label}</span>
+                  </button>
                 ))
               )}
-            </select>
-          </label>
+            </div>
+          </div>
 
           <div className="field-grid">
             <label className="field">
