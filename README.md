@@ -9,18 +9,18 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
   - 全選択、全解除、反転
   - ホスト別に読み込み時の自動選択/解除を保存
 - アイテム送信補助
-  - ページ内から送信候補になりそうなボタン/リンクを検出
-  - popup の選択リストから対象を選ぶ
+  - TwitCasting のアイテム一覧から送信候補を取得
+  - popup のアイコン付きリストから対象を選ぶ
   - 対象アイテムを開き、「ポイントを使って送る」ボタンを押す
   - 指定回数だけ送信操作を試行
   - 最大 20 回、クリック間隔 300-5000ms
-  - 実行前に確認ダイアログを表示
+  - ポイント不足が表示された場合は処理を中断
 
 ## 方針
 
 - 対象サイトは TwitCasting のみに限定する
 - 機能は popup から明示操作したときだけ実行する
-- アイテム送信のような取り消しにくい操作には、回数上限と実行前確認を必ず入れる
+- アイテム送信のような取り消しにくい操作には、回数上限と状態検出を入れる
 - TwitCasting の制限回避、課金回避、認可回避を目的にした機能は扱わない
 
 ## 権限
@@ -46,6 +46,18 @@ npm run build
 - `npm test` - Vitest による単体テスト
 - `npm run typecheck` - TypeScript 型検査
 - `npm run build` - Chrome 拡張を `dist/` に出力
+
+## 公開パッケージ
+
+Chrome Web Store には `dist/` の中身を zip 化したファイルを提出します。
+
+```bash
+npm test
+npm run typecheck
+npm run package:release
+```
+
+公開名は `public/manifest.json` の `name` に合わせて `TwitCasting Toolkit` です。
 
 ## Agent ルール
 
