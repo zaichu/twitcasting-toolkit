@@ -24,6 +24,7 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
 ## 権限
 
 - `activeTab`: popup から現在の TwitCasting タブへ操作を送るため
+- `scripting`: content script がまだ入っていない既存タブへ、popup から復旧注入するため
 - `storage`: ホスト別の設定を保存するため
 - `https://twitcasting.tv/*`, `https://*.twitcasting.tv/*`: TwitCasting 上でのみ content script を動かすため
 

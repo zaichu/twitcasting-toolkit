@@ -38,7 +38,16 @@ const sendToTab = async <TResponse,>(
   tabId: number,
   message: ExtensionMessage
 ): Promise<TResponse> => {
-  return chrome.tabs.sendMessage(tabId, message);
+  try {
+    return await chrome.tabs.sendMessage(tabId, message);
+  } catch (error) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["assets/content.js"]
+    });
+
+    return chrome.tabs.sendMessage(tabId, message);
+  }
 };
 
 const formatCheckboxStatus = (state: CheckboxState | CheckboxActionResult | undefined): string => {
