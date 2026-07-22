@@ -82,6 +82,48 @@ describe("itemSender", () => {
     });
   });
 
+  it("lists embedded TwitCasting items before the page item list is opened", () => {
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              { "item_id": "coin", "name": "コンティニューコイン", "point": 50 },
+              { "item_id": "tea.baku", "name": "お茶ｘ10", "point": 100 }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+
+    expect(listItemCandidates()).toMatchObject({
+      host: "twitcasting.tv",
+      candidates: [
+        {
+          index: 0,
+          label: "コンティニューコイン 50",
+          userId: "c:studying777",
+          itemId: "coin",
+          point: 50
+        },
+        {
+          index: 1,
+          label: "お茶ｘ10 100",
+          userId: "c:studying777",
+          itemId: "tea.baku",
+          point: 100
+        }
+      ]
+    });
+  });
+
   it("parses TwitCasting giftItem href", () => {
     document.body.innerHTML = `
       <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
