@@ -77,6 +77,7 @@ const runItemSendInMainWorld = async (
       const maxItemSendCount = 20;
       const sendButtonTimeoutMs = 10000;
       const sendButtonPollMs = 100;
+      const insufficientPointsMessage = "必要なポイントが不足しています。";
 
       type GiftItemWindow = Window & {
         giftItem?: (userId: string, itemId?: string, usePoint?: boolean) => unknown;
@@ -154,20 +155,45 @@ const runItemSendInMainWorld = async (
           );
       };
 
-      const waitForPointSendButton = async (): Promise<HTMLElement | undefined> => {
+      const hasInsufficientPointsMessage = (): boolean => {
+        const selectors = ["#tw-item-window-data", ".tw-snackbar"];
+
+        return selectors.some((selector) => {
+          const element = document.querySelector<HTMLElement>(selector);
+
+          return Boolean(element && element.textContent?.includes(insufficientPointsMessage));
+        });
+      };
+
+      const waitForSendReadyState = async (): Promise<
+        | {
+            type: "send-button";
+            button: HTMLElement;
+          }
+        | {
+            type: "insufficient-points";
+          }
+        | {
+            type: "timeout";
+          }
+      > => {
         const startedAt = Date.now();
 
         while (Date.now() - startedAt <= sendButtonTimeoutMs) {
+          if (hasInsufficientPointsMessage()) {
+            return { type: "insufficient-points" };
+          }
+
           const button = getPointSendButton();
 
           if (button) {
-            return button;
+            return { type: "send-button", button };
           }
 
           await wait(sendButtonPollMs);
         }
 
-        return undefined;
+        return { type: "timeout" };
       };
 
       const findItemAnchor = (): HTMLElement | undefined => {
@@ -226,9 +252,19 @@ const runItemSendInMainWorld = async (
           };
         }
 
-        const sendButton = await waitForPointSendButton();
+        const sendReadyState = await waitForSendReadyState();
 
-        if (!sendButton) {
+        if (sendReadyState.type === "insufficient-points") {
+          return {
+            host: pageHost,
+            query,
+            requested: count,
+            sent,
+            stoppedReason: insufficientPointsMessage
+          };
+        }
+
+        if (sendReadyState.type === "timeout") {
           return {
             host: pageHost,
             query,
@@ -238,7 +274,7 @@ const runItemSendInMainWorld = async (
           };
         }
 
-        pressElement(sendButton);
+        pressElement(sendReadyState.button);
         sent += 1;
 
         if (index < count - 1) {
