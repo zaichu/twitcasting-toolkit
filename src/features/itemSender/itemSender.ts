@@ -6,6 +6,8 @@ import type {
 } from "../../extensionTypes";
 
 const MAX_ITEM_SEND_COUNT = 20;
+const SEND_BUTTON_TIMEOUT_MS = 5000;
+const SEND_BUTTON_POLL_MS = 100;
 
 const wait = (ms: number): Promise<void> => {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -31,7 +33,25 @@ const isDisabledElement = (element: Element): boolean => {
   return element.getAttribute("aria-disabled") === "true";
 };
 
+const twitCastingItemSelector = [
+  ".tw-item-list .tw-item-list-item",
+  ".tw-item-list-item",
+  'a[href^="javascript:giftItem("]'
+].join(",");
+
+const getTwitCastingItemElements = (): HTMLElement[] => {
+  return Array.from(document.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
+    (element) => !isDisabledElement(element)
+  );
+};
+
 const getInteractiveElements = (): HTMLElement[] => {
+  const twitCastingItems = getTwitCastingItemElements();
+
+  if (twitCastingItems.length > 0) {
+    return twitCastingItems;
+  }
+
   const selector = [
     "button",
     "a[href]",
@@ -45,7 +65,30 @@ const getInteractiveElements = (): HTMLElement[] => {
   );
 };
 
+const getTwitCastingItemLabel = (element: HTMLElement): string => {
+  const name = normalizeText(
+    element.querySelector<HTMLElement>(".tw-item-list-item-name")?.textContent ??
+      element.querySelector<HTMLImageElement>(".tw-item-list-item-icon")?.alt ??
+      ""
+  );
+  const amount = normalizeText(
+    element.querySelector<HTMLElement>(".tw-item-list-item-amount")?.textContent ?? ""
+  );
+
+  if (!name) {
+    return "";
+  }
+
+  return normalizeText([name, amount].filter(Boolean).join(" "));
+};
+
 export const getElementLabel = (element: HTMLElement): string => {
+  const twitCastingItemLabel = getTwitCastingItemLabel(element);
+
+  if (twitCastingItemLabel) {
+    return twitCastingItemLabel;
+  }
+
   const imageLabels = Array.from(element.querySelectorAll<HTMLImageElement>("img"))
     .flatMap((image) => [image.alt, image.title, image.getAttribute("aria-label")])
     .filter(Boolean);
@@ -122,7 +165,35 @@ const pressElement = (element: HTMLElement) => {
   element.dispatchEvent(new MouseEvent("mousedown", mouseOptions));
   element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
   element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
-  element.dispatchEvent(new MouseEvent("click", mouseOptions));
+  element.click();
+};
+
+const getPointSendButton = (): HTMLElement | undefined => {
+  const selectors = [
+    '#tw-item-window-data .tw-item-send-post[data-sendable="true"] #messagelink',
+    "#tw-item-window-data #gift_form #messagelink",
+    "#gift_form #messagelink"
+  ];
+
+  return selectors
+    .map((selector) => document.querySelector<HTMLElement>(selector))
+    .find((element): element is HTMLElement => Boolean(element && !isDisabledElement(element)));
+};
+
+const waitForPointSendButton = async (): Promise<HTMLElement | undefined> => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt <= SEND_BUTTON_TIMEOUT_MS) {
+    const button = getPointSendButton();
+
+    if (button) {
+      return button;
+    }
+
+    await wait(SEND_BUTTON_POLL_MS);
+  }
+
+  return undefined;
 };
 
 export const findItemCandidates = (
@@ -176,6 +247,20 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
     }
 
     pressElement(candidate.element);
+
+    const sendButton = await waitForPointSendButton();
+
+    if (!sendButton) {
+      return {
+        host: window.location.host,
+        query,
+        requested: count,
+        sent,
+        stoppedReason: "ポイント送信ボタンが見つかりませんでした"
+      };
+    }
+
+    pressElement(sendButton);
     sent += 1;
 
     if (index < count - 1) {
