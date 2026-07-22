@@ -46,6 +46,20 @@ type GiftItemCall = {
   usePoint: boolean;
 };
 
+type EmbeddedItemBoxItem = {
+  item_id?: unknown;
+  name?: unknown;
+  point?: unknown;
+};
+
+type EmbeddedItemBoxData = {
+  items?: EmbeddedItemBoxItem[];
+};
+
+type ItemCandidateWithSource = ItemCandidate & {
+  element?: HTMLElement;
+};
+
 const getTwitCastingItemElements = (): HTMLElement[] => {
   return Array.from(document.querySelectorAll<HTMLElement>(twitCastingItemSelector)).filter(
     (element) => !isDisabledElement(element)
@@ -79,20 +93,240 @@ export const getElementLabel = (element: HTMLElement): string => {
   return "";
 };
 
-const getAllItemCandidates = (): Array<ItemCandidate & { element: HTMLElement }> => {
+const getPointFromText = (text: string): number | undefined => {
+  const match = normalizeText(text).replace(/,/g, "").match(/\d+/);
+
+  return match ? Number(match[0]) : undefined;
+};
+
+export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefined => {
+  const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
+
+  if (!href) {
+    return undefined;
+  }
+
+  const match = href.match(
+    /giftItem\(\s*(['"])(.*?)\1\s*,\s*(['"])(.*?)\3\s*,\s*(true|false)\s*\)/
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  return {
+    userId: match[2],
+    itemId: match[4],
+    usePoint: match[5] === "true"
+  };
+};
+
+const getDomItemCandidates = (): ItemCandidateWithSource[] => {
   return getTwitCastingItemElements()
-    .map((element, index) => ({
-      index,
-      element,
-      label: getElementLabel(element)
-    }))
+    .map((element, index) => {
+      const giftItemCall = parseGiftItemCall(element);
+
+      return {
+        index,
+        element,
+        label: getElementLabel(element),
+        userId: giftItemCall?.userId,
+        itemId: giftItemCall?.itemId,
+        point: getPointFromText(
+          element.querySelector<HTMLElement>(".tw-item-list-item-amount")?.textContent ?? ""
+        )
+      };
+    })
     .filter((candidate) => candidate.label.length > 0);
+};
+
+const parsePageVariableUserId = (): string | undefined => {
+  const content = document
+    .querySelector<HTMLMetaElement>('meta[name="tc-page-variables"]')
+    ?.getAttribute("content");
+
+  if (!content) {
+    return undefined;
+  }
+
+  try {
+    const data = JSON.parse(content) as { broadcaster_id?: unknown };
+
+    return typeof data.broadcaster_id === "string" ? data.broadcaster_id : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const readQuotedStringAt = (source: string, startIndex: number): string | undefined => {
+  const quote = source[startIndex];
+
+  if (quote !== '"' && quote !== "'") {
+    return undefined;
+  }
+
+  let escaped = false;
+  let value = "";
+
+  for (let index = startIndex + 1; index < source.length; index += 1) {
+    const character = source[index];
+
+    if (escaped) {
+      value += character;
+      escaped = false;
+      continue;
+    }
+
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (character === quote) {
+      return value;
+    }
+
+    value += character;
+  }
+
+  return undefined;
+};
+
+const readBalancedObjectAt = (source: string, startIndex: number): string | undefined => {
+  if (source[startIndex] !== "{") {
+    return undefined;
+  }
+
+  let depth = 0;
+  let quote: string | undefined;
+  let escaped = false;
+
+  for (let index = startIndex; index < source.length; index += 1) {
+    const character = source[index];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (character === quote) {
+        quote = undefined;
+      }
+
+      continue;
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+
+    if (character === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (character === "}") {
+      depth -= 1;
+
+      if (depth === 0) {
+        return source.slice(startIndex, index + 1);
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const parseEmbeddedItemBoxCandidatesFromScript = (
+  scriptText: string,
+  initIndex: number
+): ItemCandidateWithSource[] => {
+  const openParenIndex = scriptText.indexOf("(", initIndex);
+  const firstQuoteOffset = scriptText.slice(openParenIndex + 1).search(/["']/);
+  const userId =
+    firstQuoteOffset >= 0
+      ? readQuotedStringAt(scriptText, openParenIndex + 1 + firstQuoteOffset)
+      : parsePageVariableUserId();
+  const itemsKeyIndex = scriptText.indexOf('"items"', openParenIndex);
+  const objectStartIndex = scriptText.lastIndexOf("{", itemsKeyIndex);
+
+  if (!userId || itemsKeyIndex < 0 || objectStartIndex < openParenIndex) {
+    return [];
+  }
+
+  const objectText = readBalancedObjectAt(scriptText, objectStartIndex);
+
+  if (!objectText) {
+    return [];
+  }
+
+  try {
+    const data = JSON.parse(objectText) as EmbeddedItemBoxData;
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    return items
+      .map((item, index): ItemCandidateWithSource | undefined => {
+        const itemId = typeof item.item_id === "string" ? item.item_id : undefined;
+        const name = typeof item.name === "string" ? normalizeText(item.name) : "";
+        const point = typeof item.point === "number" ? item.point : undefined;
+
+        if (!itemId || !name) {
+          return undefined;
+        }
+
+        return {
+          index,
+          label: normalizeText([name, point].filter((value) => value !== undefined).join(" ")),
+          userId,
+          itemId,
+          point
+        };
+      })
+      .filter((candidate): candidate is ItemCandidateWithSource => Boolean(candidate));
+  } catch {
+    return [];
+  }
+};
+
+const getEmbeddedItemBoxCandidates = (): ItemCandidateWithSource[] => {
+  const candidates: ItemCandidateWithSource[] = [];
+
+  for (const script of Array.from(document.scripts)) {
+    const scriptText = script.textContent ?? "";
+    let searchFrom = 0;
+
+    while (searchFrom < scriptText.length) {
+      const initIndex = scriptText.indexOf("initItemBoxWebUI(", searchFrom);
+
+      if (initIndex < 0) {
+        break;
+      }
+
+      candidates.push(...parseEmbeddedItemBoxCandidatesFromScript(scriptText, initIndex));
+      searchFrom = initIndex + "initItemBoxWebUI(".length;
+    }
+  }
+
+  return candidates.map((candidate, index) => ({ ...candidate, index }));
+};
+
+const getAllItemCandidates = (): ItemCandidateWithSource[] => {
+  const domCandidates = getDomItemCandidates();
+
+  return domCandidates.length > 0 ? domCandidates : getEmbeddedItemBoxCandidates();
 };
 
 export const listItemCandidates = (): ItemCandidateListResult => {
   const candidates = getAllItemCandidates()
     .slice(0, 80)
-    .map(({ index, label }) => ({ index, label }));
+    .map(({ index, label, userId, itemId, point }) => ({ index, label, userId, itemId, point }));
 
   return {
     host: window.location.host,
@@ -124,28 +358,6 @@ const pressElement = (element: HTMLElement) => {
   element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
   element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
   element.click();
-};
-
-export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefined => {
-  const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") : null;
-
-  if (!href) {
-    return undefined;
-  }
-
-  const match = href.match(
-    /giftItem\(\s*(['"])(.*?)\1\s*,\s*(['"])(.*?)\3\s*,\s*(true|false)\s*\)/
-  );
-
-  if (!match) {
-    return undefined;
-  }
-
-  return {
-    userId: match[2],
-    itemId: match[4],
-    usePoint: match[5] === "true"
-  };
 };
 
 const callGiftItemInPage = (giftItemCall: GiftItemCall): Promise<boolean> => {
@@ -200,15 +412,24 @@ const callGiftItemInPage = (giftItemCall: GiftItemCall): Promise<boolean> => {
   });
 };
 
-const openGiftItemWindow = async (element: HTMLElement): Promise<boolean> => {
-  const giftItemCall = parseGiftItemCall(element);
+const openGiftItemWindow = async (candidate: ItemCandidateWithSource): Promise<boolean> => {
+  const giftItemCall =
+    candidate.userId && candidate.itemId
+      ? { userId: candidate.userId, itemId: candidate.itemId, usePoint: true }
+      : candidate.element
+        ? parseGiftItemCall(candidate.element)
+        : undefined;
 
   if (giftItemCall && (await callGiftItemInPage(giftItemCall))) {
     return true;
   }
 
-  pressElement(element);
-  return true;
+  if (candidate.element) {
+    pressElement(candidate.element);
+    return true;
+  }
+
+  return false;
 };
 
 const getPointSendButton = (): HTMLElement | undefined => {
@@ -241,7 +462,7 @@ const waitForPointSendButton = async (): Promise<HTMLElement | undefined> => {
 
 export const findItemCandidates = (
   query: string
-): Array<ItemCandidate & { element: HTMLElement }> => {
+): ItemCandidateWithSource[] => {
   const normalizedQuery = normalizeText(query).toLowerCase();
 
   if (!normalizedQuery) {
@@ -258,14 +479,26 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
   const delayMs = clampItemSendDelay(request.delayMs);
   const query = request.label ?? request.query ?? "";
   const candidates = getAllItemCandidates();
+  const candidateByItemId =
+    request.userId && request.itemId
+      ? candidates.find(
+          (item) => item.userId === request.userId && item.itemId === request.itemId
+        ) ?? {
+          index: -1,
+          label: request.label ?? request.itemId,
+          userId: request.userId,
+          itemId: request.itemId
+        }
+      : undefined;
   const candidateByIndex =
     typeof request.candidateIndex === "number"
       ? candidates.find((item) => item.index === request.candidateIndex)
       : undefined;
   const candidate =
-    candidateByIndex && (!request.label || candidateByIndex.label === request.label)
+    candidateByItemId ??
+    (candidateByIndex && (!request.label || candidateByIndex.label === request.label)
       ? candidateByIndex
-      : candidates.find((item) => item.label === request.label) ?? findItemCandidates(query)[0];
+      : candidates.find((item) => item.label === request.label) ?? findItemCandidates(query)[0]);
   let sent = 0;
 
   if (!candidate) {
@@ -279,7 +512,7 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
   }
 
   for (let index = 0; index < count; index += 1) {
-    if (!candidate.element.isConnected || isDisabledElement(candidate.element)) {
+    if (candidate.element && (!candidate.element.isConnected || isDisabledElement(candidate.element))) {
       return {
         host: window.location.host,
         query,
@@ -289,7 +522,17 @@ export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResul
       };
     }
 
-    await openGiftItemWindow(candidate.element);
+    const opened = await openGiftItemWindow(candidate);
+
+    if (!opened) {
+      return {
+        host: window.location.host,
+        query,
+        requested: count,
+        sent,
+        stoppedReason: "アイテム送信画面を開けませんでした"
+      };
+    }
 
     const sendButton = await waitForPointSendButton();
 

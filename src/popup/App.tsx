@@ -218,6 +218,8 @@ export const App = () => {
         request: {
           candidateIndex: selectedItem.index,
           label: selectedItem.label,
+          userId: selectedItem.userId,
+          itemId: selectedItem.itemId,
           count: itemCount,
           delayMs: itemDelayMs
         }

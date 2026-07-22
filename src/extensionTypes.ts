@@ -25,6 +25,9 @@ export type CheckboxActionResult = CheckboxState & {
 export type ItemCandidate = {
   index: number;
   label: string;
+  userId?: string;
+  itemId?: string;
+  point?: number;
 };
 
 export type ItemCandidateListResult = {
@@ -36,6 +39,8 @@ export type ItemSendRequest = {
   candidateIndex?: number;
   label?: string;
   query?: string;
+  userId?: string;
+  itemId?: string;
   count: number;
   delayMs: number;
 };
