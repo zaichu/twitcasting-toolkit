@@ -34,10 +34,12 @@ Claude が実装した差分または PR を Codex がレビューする。
 変更範囲に応じて実行:
 
 - TypeScript / React / manifest / content script 変更がある場合:
+  - `npm test`
   - `npm run typecheck`
   - `npm run build`
 - package 変更がある場合:
   - `npm install`
+  - `npm test`
   - `npm run build`
 - 拡張機能の権限変更がある場合:
   - `public/manifest.json` の `permissions` / `host_permissions` を確認する
