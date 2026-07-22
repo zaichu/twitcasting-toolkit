@@ -31,6 +31,7 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
 
 ```bash
 npm install
+npm test
 npm run build
 ```
 
@@ -39,6 +40,7 @@ npm run build
 ## コマンド
 
 - `npm run dev` - popup UI の開発サーバー
+- `npm test` - Vitest による単体テスト
 - `npm run typecheck` - TypeScript 型検査
 - `npm run build` - Chrome 拡張を `dist/` に出力
 

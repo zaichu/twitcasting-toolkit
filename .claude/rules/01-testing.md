@@ -3,6 +3,7 @@
 ## 標準検証
 
 - 型変更後は `npm run typecheck`
+- ロジック変更後は `npm test`
 - ビルド構成変更後は `npm run build`
 - Chrome 拡張として確認するときは `dist/` を「パッケージ化されていない拡張機能」として読み込む
 - 手動確認は `https://twitcasting.tv/` 配下のページで行う

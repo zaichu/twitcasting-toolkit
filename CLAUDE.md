@@ -37,6 +37,7 @@
 ## コマンド
 
 - `npm run dev` - Vite 開発サーバー
+- `npm test` - Vitest 単体テスト
 - `npm run typecheck` - TypeScript 型検査
 - `npm run build` - 拡張機能を `dist/` にビルド
 

@@ -25,6 +25,12 @@ npm install
 npm run typecheck
 ```
 
+### テスト
+
+```bash
+npm test
+```
+
 ### Chrome 拡張ビルド
 
 ```bash
@@ -39,8 +45,9 @@ npm run dev
 
 ## 推奨実行順序
 
-1. `npm run typecheck`
-2. `npm run build`
+1. `npm test`
+2. `npm run typecheck`
+3. `npm run build`
 
 ## 確認観点
 
