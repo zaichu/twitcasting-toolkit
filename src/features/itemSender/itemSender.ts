@@ -106,9 +106,12 @@ const getPointFromText = (text: string): number | undefined => {
 const AVAILABLE_POINTS_TEXT_PATTERN =
   /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
 
+const POINT_PURCHASE_HEADING_PATTERN = /([\d,]+)\s*ポイント購入/;
+
 const getAvailablePointsFromDocument = (root: ParentNode): number | undefined => {
   const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
-  const match = normalizeText(container?.textContent ?? "").match(AVAILABLE_POINTS_TEXT_PATTERN);
+  const text = normalizeText(container?.textContent ?? "");
+  const match = text.match(AVAILABLE_POINTS_TEXT_PATTERN) ?? text.match(POINT_PURCHASE_HEADING_PATTERN);
 
   if (!match) {
     return undefined;
