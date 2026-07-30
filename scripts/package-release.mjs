@@ -3,10 +3,20 @@ import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateRawSync } from "node:zlib";
+import { assertVersionMatch } from "./checkReleaseVersion.mjs";
 
 const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const distDir = join(projectRoot, "dist");
 const manifest = JSON.parse(await readFile(join(distDir, "manifest.json"), "utf8"));
+const pkg = JSON.parse(await readFile(join(projectRoot, "package.json"), "utf8"));
+
+try {
+  assertVersionMatch(manifest.version, pkg.version);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
 const outPath = join(
   projectRoot,
   "release",
