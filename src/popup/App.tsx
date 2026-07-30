@@ -472,14 +472,6 @@ export const App = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      `「${selectedItem.label}」を ${itemCount} 回送信します。よろしいですか？`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setBusy(true);
     setError(undefined);
     setItemResult(undefined);
