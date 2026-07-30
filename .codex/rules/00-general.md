@@ -6,6 +6,15 @@
 - コードコメントは、必要な場合のみ日本語で書く
 - 変数名・関数名・型名は英語で書く
 
+## Agent 分担
+
+- 原則として Codex は設計、テスト観点整理、Claude への実装依頼、実装後レビューを担当する
+- 原則として Claude は Codex から渡された依頼文に基づく実装を担当する
+- Codex が直接実装してよい例外は、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
+- Codex から Claude に実装を渡す場合は `.claude/skills/codex-claude-handoff/SKILL.md` を使う
+- Codex はファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
+- Claude に実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
+
 ## 構成方針
 
 - 拡張機能の manifest 正本は `public/manifest.json`
