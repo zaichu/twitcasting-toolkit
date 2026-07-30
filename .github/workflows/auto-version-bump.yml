@@ -51,18 +51,33 @@ jobs:
           VERSION="$(node -p "require('./package.json').version")"
           BRANCH="chore/version-bump-${SOURCE_PR}-to-${VERSION}"
 
-          git switch -c "$BRANCH"
-          git add package.json package-lock.json public/manifest.json
-          git commit -m "chore: バージョンを${VERSION}に更新"
-          git push -u origin "$BRANCH"
+          EXISTING_PR_URL="$(gh pr list \
+            --state open \
+            --head "$BRANCH" \
+            --json url \
+            --jq ".[0].url" 2>/dev/null || true)"
+
+          if [ -n "$EXISTING_PR_URL" ]; then
+            echo "既存の PR が見つかりました: $EXISTING_PR_URL"
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "既存の remote branch $BRANCH を使用します"
+            SHA="$(git ls-remote --heads origin "$BRANCH" | cut -f1)"
+          else
+            git switch -c "$BRANCH"
+            git add package.json package-lock.json public/manifest.json
+            git commit -m "chore: バージョンを${VERSION}に更新"
+            git push -u origin "$BRANCH"
+            SHA="$(git rev-parse HEAD)"
+          fi
 
           gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "バージョンを${VERSION}に更新" \
             --body "PR #${SOURCE_PR} の main マージに伴う自動 patch version 更新です。"
-
-          SHA="$(git rev-parse HEAD)"
 
           gh workflow run ci.yml --ref "$BRANCH" --field ref="$BRANCH"
 
