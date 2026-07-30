@@ -2,15 +2,27 @@
   "name": "TwitCasting Toolkit",
   "short_name": "TwitCasting Tools",
   "description": "TwitCasting の操作を補助するためのツール群です。",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "manifest_version": 3,
-  "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["https://twitcasting.tv/*", "https://*.twitcasting.tv/*"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://twitcasting.tv/*",
+    "https://*.twitcasting.tv/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://twitcasting.tv/*", "https://*.twitcasting.tv/*"],
+      "matches": [
+        "https://twitcasting.tv/*",
+        "https://*.twitcasting.tv/*"
+      ],
       "run_at": "document_idle",
-      "js": ["assets/content.js"]
+      "js": [
+        "assets/content.js"
+      ]
     }
   ],
   "icons": {
