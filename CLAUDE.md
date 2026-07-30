@@ -17,6 +17,15 @@
 - 指示されていない改善・リファクタを混在させない
 - 情報不足時の質問は 1 つだけにする
 
+## Codex / Claude 分担
+
+- 原則として Codex は設計、テスト観点整理、Claude への実装依頼、実装後レビューを担当する
+- 原則として Claude は Codex から渡された依頼文に基づく実装を担当する
+- Codex が直接実装してよい例外は、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
+- Codex から Claude に実装を渡す場合は `.claude/skills/codex-claude-handoff/SKILL.md` を使う
+- Codex はファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
+- Claude に実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
+
 ## Agent Assets
 
 - repo 内の agent 設定の正本は `./.claude` とする

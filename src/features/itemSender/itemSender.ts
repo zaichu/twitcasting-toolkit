@@ -2,7 +2,8 @@ import type {
   ItemCandidate,
   ItemCandidateListResult,
   ItemSendRequest,
-  ItemSendResult
+  ItemSendResult,
+  PointRecovery
 } from "../../extensionTypes";
 
 const MAX_ITEM_SEND_COUNT = 20;
@@ -55,6 +56,8 @@ type EmbeddedItemBoxItem = {
 
 type EmbeddedItemBoxData = {
   items?: EmbeddedItemBoxItem[];
+  point?: unknown;
+  available_point?: unknown;
 };
 
 type ItemCandidateWithSource = ItemCandidate & {
@@ -98,6 +101,86 @@ const getPointFromText = (text: string): number | undefined => {
   const match = normalizeText(text).replace(/,/g, "").match(/\d+/);
 
   return match ? Number(match[0]) : undefined;
+};
+
+const AVAILABLE_POINTS_TEXT_PATTERN =
+  /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
+
+const POINT_PURCHASE_HEADING_PATTERN = /([\d,]+)\s*ポイント購入/;
+
+const getAvailablePointsFromDocument = (root: ParentNode): number | undefined => {
+  const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
+  const text = normalizeText(container?.textContent ?? "");
+  const match = text.match(AVAILABLE_POINTS_TEXT_PATTERN) ?? text.match(POINT_PURCHASE_HEADING_PATTERN);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const value = Number(match[1].replace(/,/g, ""));
+
+  return Number.isFinite(value) ? value : undefined;
+};
+
+const POINT_RECOVERY_TEXT_PATTERN = /(あと.+?で)\s*([\d,]+)\s*pt\s*(?:に)?\s*回復/;
+
+const getPointRecoveryFromDocument = (root: ParentNode): PointRecovery | undefined => {
+  const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
+  const match = normalizeText(container?.textContent ?? "").match(POINT_RECOVERY_TEXT_PATTERN);
+
+  if (!match) {
+    return undefined;
+  }
+
+  const recoveredPoints = Number(match[2].replace(/,/g, ""));
+
+  if (!Number.isFinite(recoveredPoints)) {
+    return undefined;
+  }
+
+  return {
+    remainingText: match[1],
+    recoveredPoints
+  };
+};
+
+const getAvailablePointsFromEmbeddedScripts = (root: Document = document): number | undefined => {
+  for (const script of Array.from(root.scripts)) {
+    const scriptText = script.textContent ?? "";
+    let searchFrom = 0;
+
+    while (searchFrom < scriptText.length) {
+      const initIndex = scriptText.indexOf("initItemBoxWebUI(", searchFrom);
+
+      if (initIndex < 0) {
+        break;
+      }
+
+      const openParenIndex = scriptText.indexOf("(", initIndex);
+      const itemsKeyIndex = scriptText.indexOf('"items"', openParenIndex);
+      const objectStartIndex = scriptText.lastIndexOf("{", itemsKeyIndex);
+
+      if (itemsKeyIndex >= 0 && objectStartIndex >= openParenIndex) {
+        const objectText = readBalancedObjectAt(scriptText, objectStartIndex);
+
+        if (objectText) {
+          try {
+            const data = JSON.parse(objectText) as EmbeddedItemBoxData;
+
+            if (typeof data.available_point === "number") {
+              return data.available_point;
+            }
+          } catch {
+            // 埋め込みデータの JSON 解析に失敗した場合は無視する
+          }
+        }
+      }
+
+      searchFrom = initIndex + "initItemBoxWebUI(".length;
+    }
+  }
+
+  return undefined;
 };
 
 const toAbsoluteUrl = (url: string | undefined): string | undefined => {
@@ -189,11 +272,17 @@ const getTargetUserId = (): string | undefined => {
   );
 };
 
-const getAjaxItemListCandidates = async (): Promise<ItemCandidateWithSource[]> => {
+type AjaxItemListResult = {
+  candidates: ItemCandidateWithSource[];
+  availablePoints?: number;
+  pointRecovery?: PointRecovery;
+};
+
+const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
   const userId = getTargetUserId();
 
   if (!userId) {
-    return [];
+    return { candidates: [] };
   }
 
   const params = new URLSearchParams();
@@ -209,23 +298,30 @@ const getAjaxItemListCandidates = async (): Promise<ItemCandidateWithSource[]> =
     });
 
     if (!response.ok) {
-      return [];
+      return { candidates: [] };
     }
 
     const html = await response.text();
+    const parsedDocument = new DOMParser().parseFromString(html, "text/html");
+    const availablePoints =
+      getAvailablePointsFromDocument(parsedDocument) ??
+      getAvailablePointsFromEmbeddedScripts(parsedDocument);
+    const pointRecovery = getPointRecoveryFromDocument(parsedDocument);
 
     if (!html.includes("tw-item-list-item")) {
-      return [];
+      return { candidates: [], availablePoints, pointRecovery };
     }
 
-    const parsedDocument = new DOMParser().parseFromString(html, "text/html");
-
-    return getDomItemCandidates(parsedDocument).map((candidate, index) => ({
-      ...candidate,
-      index
-    }));
+    return {
+      candidates: getDomItemCandidates(parsedDocument).map((candidate, index) => ({
+        ...candidate,
+        index
+      })),
+      availablePoints,
+      pointRecovery
+    };
   } catch {
-    return [];
+    return { candidates: [] };
   }
 };
 
@@ -397,8 +493,10 @@ const getAllItemCandidates = (): ItemCandidateWithSource[] => {
 };
 
 export const listItemCandidates = async (): Promise<ItemCandidateListResult> => {
-  const ajaxCandidates = await getAjaxItemListCandidates();
-  const candidates = (ajaxCandidates.length > 0 ? ajaxCandidates : getAllItemCandidates())
+  const ajaxResult = await getAjaxItemListCandidates();
+  const candidates = (
+    ajaxResult.candidates.length > 0 ? ajaxResult.candidates : getAllItemCandidates()
+  )
     .slice(0, 80)
     .map(({ index, label, userId, itemId, point, imageUrl }) => ({
       index,
@@ -408,10 +506,17 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
       point,
       imageUrl
     }));
+  const availablePoints =
+    ajaxResult.availablePoints ??
+    getAvailablePointsFromDocument(document) ??
+    getAvailablePointsFromEmbeddedScripts();
+  const pointRecovery = ajaxResult.pointRecovery ?? getPointRecoveryFromDocument(document);
 
   return {
     host: window.location.host,
-    candidates
+    candidates,
+    availablePoints,
+    pointRecovery
   };
 };
 

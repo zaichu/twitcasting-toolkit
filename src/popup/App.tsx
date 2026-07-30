@@ -8,9 +8,13 @@ import {
   ItemCandidate,
   ItemCandidateListResult,
   ItemSendRequest,
-  ItemSendResult
+  ItemSendResult,
+  PointRecovery
 } from "../extensionTypes";
 import { getSettings, saveCheckboxRule } from "../storage";
+
+const MAX_POPUP_ITEM_SEND_COUNT = 20;
+const ITEM_SEND_DELAY_MS = 300;
 
 type ActiveTab = {
   id: number;
@@ -298,8 +302,21 @@ const runItemSendInMainWorld = async (
   return result.result;
 };
 
+export const getMaxItemCountFromPoints = (
+  availablePoints: number | undefined,
+  point: number | undefined
+): number | undefined => {
+  if (availablePoints === undefined || point === undefined || point <= 0) {
+    return undefined;
+  }
+
+  const maxCount = Math.floor(availablePoints / point);
+
+  return maxCount > 0 ? Math.min(maxCount, MAX_POPUP_ITEM_SEND_COUNT) : undefined;
+};
+
 export const App = () => {
-  const [activeTool, setActiveTool] = useState<Tool>("checkbox");
+  const [activeTool, setActiveTool] = useState<Tool>("item-sender");
   const [tab, setTab] = useState<ActiveTab>();
   const [checkboxState, setCheckboxState] = useState<CheckboxState | CheckboxActionResult>();
   const [checkboxRule, setCheckboxRule] = useState<CheckboxRule>({
@@ -308,8 +325,9 @@ export const App = () => {
   });
   const [itemCandidates, setItemCandidates] = useState<ItemCandidate[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>();
+  const [availablePoints, setAvailablePoints] = useState<number>();
+  const [pointRecovery, setPointRecovery] = useState<PointRecovery>();
   const [itemCount, setItemCount] = useState(1);
-  const [itemDelayMs, setItemDelayMs] = useState(700);
   const [itemResult, setItemResult] = useState<ItemSendResult>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -323,6 +341,8 @@ export const App = () => {
       setCheckboxState(undefined);
       setItemCandidates([]);
       setSelectedItemIndex(undefined);
+      setAvailablePoints(undefined);
+      setPointRecovery(undefined);
       return;
     }
 
@@ -347,8 +367,10 @@ export const App = () => {
     void refresh();
   }, []);
 
-  const loadItemCandidates = async () => {
-    if (!tab) {
+  const loadItemCandidates = async (targetTab?: ActiveTab) => {
+    const currentTab = targetTab ?? tab;
+
+    if (!currentTab) {
       return;
     }
 
@@ -357,11 +379,13 @@ export const App = () => {
     setItemResult(undefined);
 
     try {
-      const result = await sendToTab<ItemCandidateListResult>(tab.id, {
+      const result = await sendToTab<ItemCandidateListResult>(currentTab.id, {
         feature: "item-sender",
         type: "list"
       });
       setItemCandidates(result.candidates);
+      setAvailablePoints(result.availablePoints);
+      setPointRecovery(result.pointRecovery);
       setSelectedItemIndex((currentIndex) => {
         if (result.candidates.some((candidate) => candidate.index === currentIndex)) {
           return currentIndex;
@@ -372,6 +396,8 @@ export const App = () => {
     } catch (error) {
       setItemCandidates([]);
       setSelectedItemIndex(undefined);
+      setAvailablePoints(undefined);
+      setPointRecovery(undefined);
       setError(`アイテム候補の取得に失敗しました: ${String(error)}`);
     } finally {
       setBusy(false);
@@ -428,8 +454,6 @@ export const App = () => {
   };
 
   const sendItem = async () => {
-    const selectedItem = itemCandidates.find((candidate) => candidate.index === selectedItemIndex);
-
     if (!tab || !selectedItem) {
       return;
     }
@@ -447,7 +471,7 @@ export const App = () => {
           userId: selectedItem.userId,
           itemId: selectedItem.itemId,
           count: itemCount,
-          delayMs: itemDelayMs
+          delayMs: ITEM_SEND_DELAY_MS
         },
         tab.host
       );
@@ -459,8 +483,11 @@ export const App = () => {
     }
   };
 
+  const selectedItem = itemCandidates.find((candidate) => candidate.index === selectedItemIndex);
+  const maxItemCount = getMaxItemCountFromPoints(availablePoints, selectedItem?.point);
   const checkboxDisabled = !tab || busy;
   const itemDisabled = !tab || busy || selectedItemIndex === undefined;
+  const maxItemCountDisabled = !tab || busy || maxItemCount === undefined;
 
   return (
     <main className="popup-shell">
@@ -469,9 +496,6 @@ export const App = () => {
           <h1>TwitCasting Toolkit</h1>
           <p>{tab?.host ?? "TwitCasting ページのみ対応"}</p>
         </div>
-        <button className="icon-button" type="button" onClick={refresh} disabled={busy}>
-          更新
-        </button>
       </header>
 
       <nav className="tabs" aria-label="ツール">
@@ -579,7 +603,21 @@ export const App = () => {
             <span>アイテム</span>
             <div className="item-picker" role="listbox" aria-label="アイテム">
               {itemCandidates.length === 0 ? (
-                <p className="empty-list">候補がありません</p>
+                busy ? (
+                  <p className="empty-list">候補を読み込み中...</p>
+                ) : (
+                  <div className="empty-list">
+                    <span>候補がありません</span>
+                    <button
+                      type="button"
+                      className="retry-button"
+                      disabled={!tab || busy}
+                      onClick={() => void loadItemCandidates()}
+                    >
+                      再試行
+                    </button>
+                  </div>
+                )
               ) : (
                 itemCandidates.map((candidate) => (
                   <button
@@ -606,9 +644,26 @@ export const App = () => {
             </div>
           </div>
 
-          <div className="field-grid">
-            <label className="field">
-              <span>回数</span>
+          <div className="point-summary" aria-label="ポイント情報">
+            <div>
+              <span>利用可能</span>
+              <strong>{availablePoints !== undefined ? `${availablePoints} pt` : "不明"}</strong>
+            </div>
+            <div>
+              <span>消費</span>
+              <strong>{selectedItem?.point !== undefined ? `${selectedItem.point} pt/回` : "-"}</strong>
+            </div>
+          </div>
+
+          {pointRecovery && (
+            <p className="point-recovery" aria-label="ポイント回復予定">
+              {pointRecovery.remainingText} {pointRecovery.recoveredPoints} ptに回復
+            </p>
+          )}
+
+          <label className="field">
+            <span>回数</span>
+            <div className="count-row">
               <input
                 type="number"
                 min={1}
@@ -616,24 +671,22 @@ export const App = () => {
                 value={itemCount}
                 onChange={(event) => setItemCount(Number(event.currentTarget.value))}
               />
-            </label>
-            <label className="field">
-              <span>間隔 ms</span>
-              <input
-                type="number"
-                min={300}
-                max={5000}
-                step={100}
-                value={itemDelayMs}
-                onChange={(event) => setItemDelayMs(Number(event.currentTarget.value))}
-              />
-            </label>
-          </div>
+              <button
+                type="button"
+                className="max-button"
+                disabled={maxItemCountDisabled}
+                onClick={() => {
+                  if (maxItemCount !== undefined) {
+                    setItemCount(maxItemCount);
+                  }
+                }}
+              >
+                最大
+              </button>
+            </div>
+          </label>
 
-          <div className="actions two">
-            <button type="button" onClick={() => void loadItemCandidates()} disabled={!tab || busy}>
-              再取得
-            </button>
+          <div className="actions one">
             <button type="button" onClick={() => void sendItem()} disabled={itemDisabled}>
               実行
             </button>

@@ -215,6 +215,380 @@ describe("itemSender", () => {
     });
   });
 
+  it("returns available points from the TwitCasting item window", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <p class="tw-item-point-status">利用可能ポイント 340 pt</p>
+            <div class="tw-item-list">
+              <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+                <span class="tw-item-list-item-name">コンティニューコイン</span>
+                <span class="tw-item-list-item-amount">50</span>
+              </a>
+            </div>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 340,
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("returns available points from the TwitCasting point purchase heading", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <div class="tw-item-owned-point">
+              <span>32</span>
+              <a href="/indexgift.php">ポイント購入</a>
+            </div>
+            <div class="tw-item-list">
+              <a href="javascript:giftItem('c:studying777', 'clap', true);" class="tw-item-list-item">
+                <span class="tw-item-list-item-name">拍手</span>
+                <span class="tw-item-list-item-amount">15</span>
+              </a>
+              <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+                <span class="tw-item-list-item-name">コンティニューコイン</span>
+                <span class="tw-item-list-item-amount">50</span>
+              </a>
+            </div>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      candidates: [
+        {
+          label: "拍手 15",
+          point: 15
+        },
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("returns point recovery from the TwitCasting item window", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <section>
+              <h3>所持中</h3>
+              <p>ポイント</p>
+              <p>有料ポイント 0 含む</p>
+              <p>あと1時間50分で</p>
+              <p>132ptに回復</p>
+            </section>
+            <div class="tw-item-list">
+              <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
+                <span class="tw-item-list-item-name">コンティニューコイン</span>
+                <span class="tw-item-list-item-amount">50</span>
+              </a>
+            </div>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      pointRecovery: {
+        remainingText: "あと1時間50分で",
+        recoveredPoints: 132
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("keeps available points from gearajax when item candidates fall back to embedded data", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <p class="tw-item-point-status">利用可能ポイント 340 pt</p>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 340,
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("uses gearajax embedded available_point as available points", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <section>
+              <h3>所持中</h3>
+              <p>ポイント</p>
+              <p>有料ポイント 0 含む</p>
+              <p>あと1時間50分で</p>
+              <p>132ptに回復</p>
+            </section>
+            <script>
+              window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+                "c:studying777",
+                null,
+                "https://frontendapi.twitcasting.tv",
+                {
+                  "point": 132,
+                  "available_point": 32,
+                  "items": [],
+                  "paid_gifts": []
+                },
+                false,
+                false,
+                false
+              );
+            </script>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      pointRecovery: {
+        remainingText: "あと1時間50分で",
+        recoveredPoints: 132
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("keeps point recovery from gearajax when item candidates fall back to embedded data", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <p>あと1時間50分で</p>
+            <p>132ptに回復</p>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      pointRecovery: {
+        remainingText: "あと1時間50分で",
+        recoveredPoints: 132
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("does not use embedded top-level point as available points", async () => {
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "point": 132,
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: undefined,
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
+  it("uses embedded available_point as available points", async () => {
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "point": 132,
+            "available_point": 32,
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
   it("parses TwitCasting giftItem href", () => {
     document.body.innerHTML = `
       <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
