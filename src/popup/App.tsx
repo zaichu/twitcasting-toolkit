@@ -315,6 +315,20 @@ export const getMaxItemCountFromPoints = (
   return maxCount > 0 ? Math.min(maxCount, MAX_POPUP_ITEM_SEND_COUNT) : undefined;
 };
 
+export const getNextItemCountFromInput = (value: string, currentCount: number): number => {
+  if (value === "") {
+    return currentCount;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return currentCount;
+  }
+
+  return Math.max(1, Math.min(Math.trunc(parsed), MAX_POPUP_ITEM_SEND_COUNT));
+};
+
 export const App = () => {
   const [activeTool, setActiveTool] = useState<Tool>("item-sender");
   const [tab, setTab] = useState<ActiveTab>();
@@ -455,6 +469,14 @@ export const App = () => {
 
   const sendItem = async () => {
     if (!tab || !selectedItem) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `「${selectedItem.label}」を ${itemCount} 回送信します。よろしいですか？`
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -661,15 +683,20 @@ export const App = () => {
             </p>
           )}
 
-          <label className="field">
-            <span>回数</span>
+          <div className="field">
+            <label htmlFor="item-count-input">回数</label>
             <div className="count-row">
               <input
+                id="item-count-input"
                 type="number"
                 min={1}
                 max={20}
                 value={itemCount}
-                onChange={(event) => setItemCount(Number(event.currentTarget.value))}
+                onChange={(event) =>
+                  setItemCount((currentCount) =>
+                    getNextItemCountFromInput(event.currentTarget.value, currentCount)
+                  )
+                }
               />
               <button
                 type="button"
@@ -684,7 +711,7 @@ export const App = () => {
                 最大
               </button>
             </div>
-          </label>
+          </div>
 
           <div className="actions one">
             <button type="button" onClick={() => void sendItem()} disabled={itemDisabled}>

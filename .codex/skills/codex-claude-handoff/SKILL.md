@@ -10,7 +10,7 @@ Claude が最短で実装に着手できる依頼文を作成し、Codex から 
 
 ## Workflow
 1. `git status --short --branch` で現在ブランチを確認する。
-2. `main` の場合は `.claude/rules/03-git.md` に従い、短期ブランチまたは `/tmp/twitcasting-toolkit-<topic>` worktree を作成してから続ける。
+2. `main` の場合は `.claude/rules/03-git.md` に従い、短期ブランチまたは `/tmp/twitcasting-toolkit-<topic>` worktree を作成してから続ける。`main` 上に未コミットの変更がある場合はここで止め、その変更を保持したまま明示的に短期ブランチ/worktree へ移送するか、コミットしてから短期ブランチ/worktree を作成する。変更を破棄しない。
 3. 依頼の目的を1文で確定する。
 4. 現状の挙動と期待挙動を対で書く。
 5. 根拠となるファイルとログを列挙する。

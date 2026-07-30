@@ -506,11 +506,13 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
       point,
       imageUrl
     }));
+  const fallbackPointsRoot: ParentNode =
+    document.querySelector<HTMLElement>("#tw-item-window-data") ?? document;
   const availablePoints =
     ajaxResult.availablePoints ??
-    getAvailablePointsFromDocument(document) ??
+    getAvailablePointsFromDocument(fallbackPointsRoot) ??
     getAvailablePointsFromEmbeddedScripts();
-  const pointRecovery = ajaxResult.pointRecovery ?? getPointRecoveryFromDocument(document);
+  const pointRecovery = ajaxResult.pointRecovery ?? getPointRecoveryFromDocument(fallbackPointsRoot);
 
   return {
     host: window.location.host,
