@@ -141,8 +141,8 @@ const getPointRecoveryFromDocument = (root: ParentNode): PointRecovery | undefin
   };
 };
 
-const getAvailablePointsFromEmbeddedScripts = (): number | undefined => {
-  for (const script of Array.from(document.scripts)) {
+const getAvailablePointsFromEmbeddedScripts = (root: Document = document): number | undefined => {
+  for (const script of Array.from(root.scripts)) {
     const scriptText = script.textContent ?? "";
     let searchFrom = 0;
 
@@ -300,7 +300,9 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
 
     const html = await response.text();
     const parsedDocument = new DOMParser().parseFromString(html, "text/html");
-    const availablePoints = getAvailablePointsFromDocument(parsedDocument);
+    const availablePoints =
+      getAvailablePointsFromDocument(parsedDocument) ??
+      getAvailablePointsFromEmbeddedScripts(parsedDocument);
     const pointRecovery = getPointRecoveryFromDocument(parsedDocument);
 
     if (!html.includes("tw-item-list-item")) {

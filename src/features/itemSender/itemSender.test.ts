@@ -340,6 +340,82 @@ describe("itemSender", () => {
     });
   });
 
+  it("uses gearajax embedded available_point as available points", async () => {
+    document.head.innerHTML = `
+      <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">
+    `;
+    document.body.innerHTML = `
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        `
+          <div id="tw-item-window-data">
+            <section>
+              <h3>所持中</h3>
+              <p>ポイント</p>
+              <p>有料ポイント 0 含む</p>
+              <p>あと1時間50分で</p>
+              <p>132ptに回復</p>
+            </section>
+            <script>
+              window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+                "c:studying777",
+                null,
+                "https://frontendapi.twitcasting.tv",
+                {
+                  "point": 132,
+                  "available_point": 32,
+                  "items": [],
+                  "paid_gifts": []
+                },
+                false,
+                false,
+                false
+              );
+            </script>
+          </div>
+        `,
+        { status: 200 }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      pointRecovery: {
+        remainingText: "あと1時間50分で",
+        recoveredPoints: 132
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+  });
+
   it("keeps point recovery from gearajax when item candidates fall back to embedded data", async () => {
     document.head.innerHTML = `
       <meta name="tc-page-variables" content="{&quot;broadcaster_id&quot;:&quot;c:studying777&quot;}">

@@ -653,10 +653,6 @@ export const App = () => {
               <span>消費</span>
               <strong>{selectedItem?.point !== undefined ? `${selectedItem.point} pt/回` : "-"}</strong>
             </div>
-            <div>
-              <span>最大</span>
-              <strong>{maxItemCount !== undefined ? `${maxItemCount} 回` : "-"}</strong>
-            </div>
           </div>
 
           {pointRecovery && (
