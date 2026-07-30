@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMaxItemCountFromPoints } from "./App";
+import { getMaxItemCountFromPoints, getNextItemCountFromInput } from "./App";
 
 describe("popup item sender helpers", () => {
   it("calculates the maximum send count from available points and item point cost", () => {
@@ -7,5 +7,13 @@ describe("popup item sender helpers", () => {
     expect(getMaxItemCountFromPoints(2000, 50)).toBe(20);
     expect(getMaxItemCountFromPoints(undefined, 50)).toBeUndefined();
     expect(getMaxItemCountFromPoints(340, undefined)).toBeUndefined();
+  });
+
+  it("keeps item count input within the sendable range", () => {
+    expect(getNextItemCountFromInput("6", 1)).toBe(6);
+    expect(getNextItemCountFromInput("25", 1)).toBe(20);
+    expect(getNextItemCountFromInput("0", 6)).toBe(1);
+    expect(getNextItemCountFromInput("", 6)).toBe(6);
+    expect(getNextItemCountFromInput("abc", 6)).toBe(6);
   });
 });

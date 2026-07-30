@@ -14,6 +14,7 @@ describe("itemSender", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    document.head.innerHTML = "";
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/example");
   });
@@ -287,6 +288,34 @@ describe("itemSender", () => {
         {
           label: "コンティニューコイン 50",
           point: 50
+        }
+      ]
+    });
+  });
+
+  it("prefers the item window when reading fallback point purchase text", async () => {
+    document.body.innerHTML = `
+      <aside>999 ポイント購入</aside>
+      <div id="tw-item-window-data">
+        <div class="tw-item-owned-point">
+          <span>32</span>
+          <a href="/indexgift.php">ポイント購入</a>
+        </div>
+        <div class="tw-item-list">
+          <a href="javascript:giftItem('c:studying777', 'clap', true);" class="tw-item-list-item">
+            <span class="tw-item-list-item-name">拍手</span>
+            <span class="tw-item-list-item-amount">15</span>
+          </a>
+        </div>
+      </div>
+    `;
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      candidates: [
+        {
+          label: "拍手 15",
+          point: 15
         }
       ]
     });
