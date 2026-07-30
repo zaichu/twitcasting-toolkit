@@ -31,9 +31,16 @@ export type ItemCandidate = {
   imageUrl?: string;
 };
 
+export type PointRecovery = {
+  remainingText: string;
+  recoveredPoints: number;
+};
+
 export type ItemCandidateListResult = {
   host: string;
   candidates: ItemCandidate[];
+  availablePoints?: number;
+  pointRecovery?: PointRecovery;
 };
 
 export type ItemSendRequest = {
