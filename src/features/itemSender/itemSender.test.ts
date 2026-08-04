@@ -543,6 +543,134 @@ describe("itemSender", () => {
     });
   });
 
+  it("loads point status from the logged-in user's points page", async () => {
+    document.body.innerHTML = `
+      <nav class="tw-global-header" data-user-id="zaichu6"></nav>
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "available_point": 32,
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/zaichu6/points") {
+        return new Response(
+          `
+            <ul class="tw-point-having-props-display">
+              <li>
+                <span>
+                  <span class="tw-point-having-props-display__name">
+                    <span>ポイント</span>
+                    <span class="tw-point-having-props-display__desc">
+                      <img src="/img/icon_point_paid.png" alt=""> 有料ポイント 0 含む
+                    </span>
+                  </span>
+                  <span class="tw-point-having-props-display__amount">2</span>
+                </span>
+              </li>
+            </ul>
+            <div class="tw-paragraph-secondary">
+              あと<strong>11時間28分</strong>で<br><strong>102</strong>ptに回復
+            </div>
+          `,
+          { status: 200 }
+        );
+      }
+
+      return new Response("", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      pointRecovery: {
+        remainingText: "あと11時間28分で",
+        recoveredPoints: 102
+      },
+      pointStatus: {
+        availablePoints: 32,
+        ownedPoints: 2,
+        paidPoints: 0,
+        pointRecovery: {
+          remainingText: "あと11時間28分で",
+          recoveredPoints: 102
+        }
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/zaichu6/points", {
+      credentials: "include"
+    });
+  });
+
+  it("does not load a points page from unrelated data-user-id attributes", async () => {
+    document.body.innerHTML = `
+      <div class="tw-user-header" data-user-id="streamer"></div>
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "available_point": 32,
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn(async () => new Response("", { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listItemCandidates()).resolves.toMatchObject({
+      availablePoints: 32,
+      pointStatus: {
+        availablePoints: 32
+      },
+      candidates: [
+        {
+          label: "コンティニューコイン 50",
+          point: 50
+        }
+      ]
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith("/streamer/points", {
+      credentials: "include"
+    });
+  });
+
   it("does not use embedded top-level point as available points", async () => {
     document.body.innerHTML = `
       <script>
