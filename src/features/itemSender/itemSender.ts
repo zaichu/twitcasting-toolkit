@@ -9,6 +9,7 @@ import type {
 
 const MAX_ITEM_SEND_COUNT = 20;
 const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
+const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
 const SEND_BUTTON_TIMEOUT_MS = 5000;
 const SEND_BUTTON_POLL_MS = 100;
 
@@ -348,9 +349,15 @@ const getAccountPointStatus = async (): Promise<PointStatus | undefined> => {
     return undefined;
   }
 
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, ACCOUNT_POINT_STATUS_TIMEOUT_MS);
+
   try {
     const response = await fetch(`/${encodeURIComponent(userId)}/points`, {
-      credentials: "include"
+      credentials: "include",
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -363,6 +370,8 @@ const getAccountPointStatus = async (): Promise<PointStatus | undefined> => {
     return getPointStatusFromDocument(parsedDocument);
   } catch {
     return undefined;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 };
 
@@ -600,8 +609,10 @@ const getAllItemCandidates = (): ItemCandidateWithSource[] => {
 };
 
 export const listItemCandidates = async (): Promise<ItemCandidateListResult> => {
-  const ajaxResult = await getAjaxItemListCandidates();
-  const accountPointStatus = await getAccountPointStatus();
+  const [ajaxResult, accountPointStatus] = await Promise.all([
+    getAjaxItemListCandidates(),
+    getAccountPointStatus()
+  ]);
   const candidates = (
     ajaxResult.candidates.length > 0 ? ajaxResult.candidates : getAllItemCandidates()
   )

@@ -47,6 +47,12 @@ describe("popup item sender helpers", () => {
       { label: "有料", value: "不明" },
       { label: "消費", value: "-" }
     ]);
+
+    expect(getPointSummaryItems({ availablePoints: 32 }, undefined, undefined)).toEqual([
+      { label: "利用可能", value: "32 pt" },
+      { label: "有料", value: "不明" },
+      { label: "消費", value: "-" }
+    ]);
   });
 
   it("does not use a browser confirm dialog before sending items", () => {

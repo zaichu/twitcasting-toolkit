@@ -344,7 +344,7 @@ export const getPointSummaryItems = (
   availablePoints: number | undefined,
   selectedItemPoint: number | undefined
 ): PointSummaryItem[] => {
-  const primaryPoint = pointStatus?.ownedPoints ?? availablePoints;
+  const primaryPoint = pointStatus?.ownedPoints ?? pointStatus?.availablePoints ?? availablePoints;
   const primaryLabel = pointStatus?.ownedPoints !== undefined ? "所有" : "利用可能";
 
   return [

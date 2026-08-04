@@ -620,9 +620,86 @@ describe("itemSender", () => {
         }
       ]
     });
-    expect(fetchMock).toHaveBeenCalledWith("/zaichu6/points", {
-      credentials: "include"
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/zaichu6/points",
+      expect.objectContaining({
+        credentials: "include",
+        signal: expect.any(AbortSignal)
+      })
+    );
+  });
+
+  it("returns item candidates when the logged-in user's points page times out", async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <nav class="tw-global-header" data-user-id="zaichu6"></nav>
+      <script>
+        window.TwScripts.ItemBoxWebUI.initItemBoxWebUI(
+          "c:studying777",
+          null,
+          "https://frontendapi.twitcasting.tv",
+          {
+            "available_point": 32,
+            "items": [
+              {
+                "item_id": "coin",
+                "name": "コンティニューコイン",
+                "point": 50,
+                "image_url": "/img/item_coin.png"
+              }
+            ],
+            "paid_gifts": []
+          },
+          false,
+          false,
+          false
+        );
+      </script>
+    `;
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url === "/zaichu6/points") {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true }
+          );
+        });
+      }
+
+      return Promise.resolve(new Response("", { status: 404 }));
     });
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      const resultPromise = listItemCandidates();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await expect(resultPromise).resolves.toMatchObject({
+        availablePoints: 32,
+        pointStatus: {
+          availablePoints: 32
+        },
+        candidates: [
+          {
+            label: "コンティニューコイン 50",
+            point: 50
+          }
+        ]
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/zaichu6/points",
+        expect.objectContaining({
+          credentials: "include",
+          signal: expect.any(AbortSignal)
+        })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not load a points page from unrelated data-user-id attributes", async () => {
