@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { getMaxItemCountFromPoints, getNextItemCountFromInput } from "./App";
+import {
+  getMaxItemCountFromPoints,
+  getNextItemCountFromInput,
+  getPointSummaryItems
+} from "./App";
 
 describe("popup item sender helpers", () => {
   it("calculates the maximum send count from available points and item point cost", () => {
@@ -17,6 +21,38 @@ describe("popup item sender helpers", () => {
     expect(getNextItemCountFromInput("0", 6)).toBe(1);
     expect(getNextItemCountFromInput("", 6)).toBe(6);
     expect(getNextItemCountFromInput("abc", 6)).toBe(6);
+  });
+
+  it("formats owned and paid point details for the item sender", () => {
+    expect(
+      getPointSummaryItems(
+        {
+          availablePoints: 32,
+          ownedPoints: 2,
+          paidPoints: 0
+        },
+        32,
+        50
+      )
+    ).toEqual([
+      { label: "所有", value: "2 pt" },
+      { label: "有料", value: "0 pt" },
+      { label: "消費", value: "50 pt/回" }
+    ]);
+  });
+
+  it("falls back to available points when owned points are unknown", () => {
+    expect(getPointSummaryItems(undefined, 32, undefined)).toEqual([
+      { label: "利用可能", value: "32 pt" },
+      { label: "有料", value: "不明" },
+      { label: "消費", value: "-" }
+    ]);
+
+    expect(getPointSummaryItems({ availablePoints: 32 }, undefined, undefined)).toEqual([
+      { label: "利用可能", value: "32 pt" },
+      { label: "有料", value: "不明" },
+      { label: "消費", value: "-" }
+    ]);
   });
 
   it("does not use a browser confirm dialog before sending items", () => {

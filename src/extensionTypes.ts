@@ -36,11 +36,19 @@ export type PointRecovery = {
   recoveredPoints: number;
 };
 
+export type PointStatus = {
+  availablePoints?: number;
+  ownedPoints?: number;
+  paidPoints?: number;
+  pointRecovery?: PointRecovery;
+};
+
 export type ItemCandidateListResult = {
   host: string;
   candidates: ItemCandidate[];
   availablePoints?: number;
   pointRecovery?: PointRecovery;
+  pointStatus?: PointStatus;
 };
 
 export type ItemSendRequest = {

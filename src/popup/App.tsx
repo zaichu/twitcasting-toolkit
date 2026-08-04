@@ -9,7 +9,8 @@ import {
   ItemCandidateListResult,
   ItemSendRequest,
   ItemSendResult,
-  PointRecovery
+  PointRecovery,
+  PointStatus
 } from "../extensionTypes";
 import { getSettings, saveCheckboxRule } from "../storage";
 
@@ -329,6 +330,39 @@ export const getNextItemCountFromInput = (value: string, currentCount: number): 
   return Math.max(1, Math.min(Math.trunc(parsed), MAX_POPUP_ITEM_SEND_COUNT));
 };
 
+type PointSummaryItem = {
+  label: string;
+  value: string;
+};
+
+const formatPointValue = (point: number | undefined): string => {
+  return point !== undefined ? `${point} pt` : "不明";
+};
+
+export const getPointSummaryItems = (
+  pointStatus: PointStatus | undefined,
+  availablePoints: number | undefined,
+  selectedItemPoint: number | undefined
+): PointSummaryItem[] => {
+  const primaryPoint = pointStatus?.ownedPoints ?? pointStatus?.availablePoints ?? availablePoints;
+  const primaryLabel = pointStatus?.ownedPoints !== undefined ? "所有" : "利用可能";
+
+  return [
+    {
+      label: primaryLabel,
+      value: formatPointValue(primaryPoint)
+    },
+    {
+      label: "有料",
+      value: formatPointValue(pointStatus?.paidPoints)
+    },
+    {
+      label: "消費",
+      value: selectedItemPoint !== undefined ? `${selectedItemPoint} pt/回` : "-"
+    }
+  ];
+};
+
 export const App = () => {
   const [activeTool, setActiveTool] = useState<Tool>("item-sender");
   const [tab, setTab] = useState<ActiveTab>();
@@ -341,6 +375,7 @@ export const App = () => {
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>();
   const [availablePoints, setAvailablePoints] = useState<number>();
   const [pointRecovery, setPointRecovery] = useState<PointRecovery>();
+  const [pointStatus, setPointStatus] = useState<PointStatus>();
   const [itemCount, setItemCount] = useState(1);
   const [itemResult, setItemResult] = useState<ItemSendResult>();
   const [error, setError] = useState<string>();
@@ -357,6 +392,7 @@ export const App = () => {
       setSelectedItemIndex(undefined);
       setAvailablePoints(undefined);
       setPointRecovery(undefined);
+      setPointStatus(undefined);
       return;
     }
 
@@ -400,6 +436,7 @@ export const App = () => {
       setItemCandidates(result.candidates);
       setAvailablePoints(result.availablePoints);
       setPointRecovery(result.pointRecovery);
+      setPointStatus(result.pointStatus);
       setSelectedItemIndex((currentIndex) => {
         if (result.candidates.some((candidate) => candidate.index === currentIndex)) {
           return currentIndex;
@@ -412,6 +449,7 @@ export const App = () => {
       setSelectedItemIndex(undefined);
       setAvailablePoints(undefined);
       setPointRecovery(undefined);
+      setPointStatus(undefined);
       setError(`アイテム候補の取得に失敗しました: ${String(error)}`);
     } finally {
       setBusy(false);
@@ -499,6 +537,8 @@ export const App = () => {
 
   const selectedItem = itemCandidates.find((candidate) => candidate.index === selectedItemIndex);
   const maxItemCount = getMaxItemCountFromPoints(availablePoints, selectedItem?.point);
+  const pointSummaryItems = getPointSummaryItems(pointStatus, availablePoints, selectedItem?.point);
+  const displayPointRecovery = pointStatus?.pointRecovery ?? pointRecovery;
   const checkboxDisabled = !tab || busy;
   const itemDisabled = !tab || busy || selectedItemIndex === undefined;
   const maxItemCountDisabled = !tab || busy || maxItemCount === undefined;
@@ -659,19 +699,17 @@ export const App = () => {
           </div>
 
           <div className="point-summary" aria-label="ポイント情報">
-            <div>
-              <span>利用可能</span>
-              <strong>{availablePoints !== undefined ? `${availablePoints} pt` : "不明"}</strong>
-            </div>
-            <div>
-              <span>消費</span>
-              <strong>{selectedItem?.point !== undefined ? `${selectedItem.point} pt/回` : "-"}</strong>
-            </div>
+            {pointSummaryItems.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
           </div>
 
-          {pointRecovery && (
+          {displayPointRecovery && (
             <p className="point-recovery" aria-label="ポイント回復予定">
-              {pointRecovery.remainingText} {pointRecovery.recoveredPoints} ptに回復
+              {displayPointRecovery.remainingText} {displayPointRecovery.recoveredPoints} ptに回復
             </p>
           )}
 

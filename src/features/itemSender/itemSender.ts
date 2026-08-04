@@ -3,11 +3,13 @@ import type {
   ItemCandidateListResult,
   ItemSendRequest,
   ItemSendResult,
-  PointRecovery
+  PointRecovery,
+  PointStatus
 } from "../../extensionTypes";
 
 const MAX_ITEM_SEND_COUNT = 20;
 const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
+const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
 const SEND_BUTTON_TIMEOUT_MS = 5000;
 const SEND_BUTTON_POLL_MS = 100;
 
@@ -276,6 +278,118 @@ type AjaxItemListResult = {
   candidates: ItemCandidateWithSource[];
   availablePoints?: number;
   pointRecovery?: PointRecovery;
+  pointStatus?: PointStatus;
+};
+
+const PAID_POINTS_TEXT_PATTERN = /有料ポイント\s*([\d,]+)\s*含む/;
+
+const getNumberFromText = (text: string | undefined): number | undefined => {
+  if (!text) {
+    return undefined;
+  }
+
+  const match = normalizeText(text).replace(/,/g, "").match(/\d+/);
+  const value = match ? Number(match[0]) : undefined;
+
+  return value !== undefined && Number.isFinite(value) ? value : undefined;
+};
+
+const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined => {
+  const availablePoints = getAvailablePointsFromDocument(root);
+  const pointRecovery = getPointRecoveryFromDocument(root);
+  const pointRows = Array.from(
+    root.querySelectorAll<HTMLElement>(".tw-point-having-props-display li")
+  );
+  const pointRow = pointRows.find((row) =>
+    normalizeText(
+      row.querySelector<HTMLElement>(".tw-point-having-props-display__name")?.textContent ??
+        row.textContent ??
+        ""
+    ).includes("ポイント")
+  );
+  const ownedPoints = getNumberFromText(
+    pointRow?.querySelector<HTMLElement>(".tw-point-having-props-display__amount")?.textContent
+  );
+  const paidPointText =
+    pointRow?.querySelector<HTMLElement>(".tw-point-having-props-display__desc")?.textContent ??
+    "";
+  const paidPointsMatch = normalizeText(paidPointText).match(PAID_POINTS_TEXT_PATTERN);
+  const paidPoints = paidPointsMatch
+    ? Number(paidPointsMatch[1].replace(/,/g, ""))
+    : undefined;
+  const pointStatus: PointStatus = {};
+
+  if (availablePoints !== undefined) {
+    pointStatus.availablePoints = availablePoints;
+  }
+
+  if (ownedPoints !== undefined) {
+    pointStatus.ownedPoints = ownedPoints;
+  }
+
+  if (paidPoints !== undefined && Number.isFinite(paidPoints)) {
+    pointStatus.paidPoints = paidPoints;
+  }
+
+  if (pointRecovery) {
+    pointStatus.pointRecovery = pointRecovery;
+  }
+
+  return Object.keys(pointStatus).length > 0 ? pointStatus : undefined;
+};
+
+const getLoggedInUserId = (): string | undefined => {
+  return document.querySelector<HTMLElement>(".tw-global-header[data-user-id]")?.dataset.userId;
+};
+
+const getAccountPointStatus = async (): Promise<PointStatus | undefined> => {
+  const userId = getLoggedInUserId();
+
+  if (!userId) {
+    return undefined;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, ACCOUNT_POINT_STATUS_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`/${encodeURIComponent(userId)}/points`, {
+      credentials: "include",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      return undefined;
+    }
+
+    const html = await response.text();
+    const parsedDocument = new DOMParser().parseFromString(html, "text/html");
+
+    return getPointStatusFromDocument(parsedDocument);
+  } catch {
+    return undefined;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+};
+
+const mergePointStatus = (...statuses: Array<PointStatus | undefined>): PointStatus | undefined => {
+  const merged: PointStatus = {};
+
+  for (const status of statuses) {
+    if (!status) {
+      continue;
+    }
+
+    merged.availablePoints ??= status.availablePoints;
+    merged.ownedPoints ??= status.ownedPoints;
+    merged.paidPoints ??= status.paidPoints;
+    merged.pointRecovery ??= status.pointRecovery;
+  }
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
 };
 
 const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
@@ -307,9 +421,10 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
       getAvailablePointsFromDocument(parsedDocument) ??
       getAvailablePointsFromEmbeddedScripts(parsedDocument);
     const pointRecovery = getPointRecoveryFromDocument(parsedDocument);
+    const pointStatus = getPointStatusFromDocument(parsedDocument);
 
     if (!html.includes("tw-item-list-item")) {
-      return { candidates: [], availablePoints, pointRecovery };
+      return { candidates: [], availablePoints, pointRecovery, pointStatus };
     }
 
     return {
@@ -318,7 +433,8 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
         index
       })),
       availablePoints,
-      pointRecovery
+      pointRecovery,
+      pointStatus
     };
   } catch {
     return { candidates: [] };
@@ -493,7 +609,10 @@ const getAllItemCandidates = (): ItemCandidateWithSource[] => {
 };
 
 export const listItemCandidates = async (): Promise<ItemCandidateListResult> => {
-  const ajaxResult = await getAjaxItemListCandidates();
+  const [ajaxResult, accountPointStatus] = await Promise.all([
+    getAjaxItemListCandidates(),
+    getAccountPointStatus()
+  ]);
   const candidates = (
     ajaxResult.candidates.length > 0 ? ajaxResult.candidates : getAllItemCandidates()
   )
@@ -508,17 +627,28 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
     }));
   const fallbackPointsRoot: ParentNode =
     document.querySelector<HTMLElement>("#tw-item-window-data") ?? document;
+  const documentPointStatus = getPointStatusFromDocument(fallbackPointsRoot);
   const availablePoints =
     ajaxResult.availablePoints ??
-    getAvailablePointsFromDocument(fallbackPointsRoot) ??
+    documentPointStatus?.availablePoints ??
     getAvailablePointsFromEmbeddedScripts();
-  const pointRecovery = ajaxResult.pointRecovery ?? getPointRecoveryFromDocument(fallbackPointsRoot);
+  const pointRecovery =
+    accountPointStatus?.pointRecovery ??
+    ajaxResult.pointRecovery ??
+    documentPointStatus?.pointRecovery;
+  const pointStatus = mergePointStatus(
+    { availablePoints, pointRecovery },
+    accountPointStatus,
+    ajaxResult.pointStatus,
+    documentPointStatus
+  );
 
   return {
     host: window.location.host,
     candidates,
     availablePoints,
-    pointRecovery
+    pointRecovery,
+    pointStatus
   };
 };
 
