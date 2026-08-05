@@ -546,6 +546,7 @@ export const App = () => {
   return (
     <main className="popup-shell">
       <header className="header">
+        <span className="brand-mark" aria-hidden="true" />
         <div>
           <h1>TwitCasting Toolkit</h1>
           <p>{tab?.host ?? "TwitCasting ページのみ対応"}</p>
