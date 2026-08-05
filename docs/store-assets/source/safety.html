@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1280, initial-scale=1" />
+    <title>TwitCasting Toolkit safety screenshot</title>
+    <link rel="stylesheet" href="./store-screenshots.css" />
+  </head>
+  <body>
+    <main class="store-frame">
+      <section class="copy">
+        <div class="brand-row">
+          <img src="../../../public/icons/icon.svg" alt="" />
+          <span>TwitCasting Toolkit</span>
+        </div>
+        <h1>TwitCasting のページだけで動作。</h1>
+        <p class="lead">
+          操作対象は TwitCasting のタブに限定。外部サーバーへの送信を追加せず、
+          popup から明示した操作だけを実行します。
+        </p>
+        <div class="badge-row">
+          <span class="badge">Host permission は TwitCasting のみ</span>
+          <span class="badge">設定は chrome.storage.sync</span>
+          <span class="badge">ポイント不足時は停止</span>
+        </div>
+      </section>
+
+      <section class="mock-browser" aria-hidden="true">
+        <div class="mock-bar">
+          <span class="mock-dot"></span>
+          <span class="mock-dot"></span>
+          <span class="mock-dot"></span>
+          <span class="mock-url">example.com</span>
+        </div>
+        <div class="mock-content">
+          <span class="mock-line short"></span>
+          <span class="mock-line mid"></span>
+          <div class="mock-grid">
+            <span class="mock-card"></span>
+            <span class="mock-card"></span>
+            <span class="mock-card"></span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="popup-card">
+        <div class="popup-inner">
+          <header class="popup-header">
+            <img src="../../../public/icons/icon.svg" alt="" />
+            <div class="popup-title">
+              <strong>TwitCasting Toolkit</strong>
+              <span>TwitCasting ページのみ対応</span>
+            </div>
+          </header>
+
+          <nav class="tabs">
+            <span class="tab">チェック</span>
+            <span class="tab selected">アイテム</span>
+          </nav>
+
+          <span class="field-label">アイテム</span>
+          <div class="item-list">
+            <div class="item-row">
+              <span class="item-icon">✓</span>
+              <span class="item-label">TwitCasting のタブで候補を取得</span>
+            </div>
+            <div class="item-row selected">
+              <span class="item-icon">!</span>
+              <span class="item-label">対象外ページでは操作しません</span>
+            </div>
+            <div class="item-row">
+              <span class="item-icon">pt</span>
+              <span class="item-label">ポイント不足時は送信を中断</span>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div><span>権限</span><strong>最小限</strong></div>
+            <div><span>対象</span><strong>TC</strong></div>
+            <div><span>保存</span><strong>設定のみ</strong></div>
+          </div>
+          <span class="primary-button">TwitCasting タブで実行</span>
+          <p class="status">外部の独自サーバーへデータを送信しません</p>
+        </div>
+      </aside>
+    </main>
+  </body>
+</html>
