@@ -2,7 +2,7 @@
   "name": "TwitCasting Toolkit",
   "short_name": "TwitCasting Tools",
   "description": "TwitCasting の操作を補助するためのツール群です。",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "manifest_version": 3,
   "permissions": [
     "activeTab",
