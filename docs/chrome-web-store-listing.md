@@ -64,7 +64,7 @@ TwitCasting ページ上で、チェックボックス操作やアイテム送�
 - `npm run build`
 - `dist/manifest.json` の `name` が `TwitCasting Toolkit`
 - `dist/manifest.json` の `version` が Chrome Web Store 上の公開済みバージョンより大きい
-- `release/twitcasting-toolkit-2.0.4.zip` を Chrome Web Store にアップロード
+- `release/twitcasting-toolkit-2.0.5.zip` を Chrome Web Store にアップロード
 
 ## Store Screenshots
 
@@ -73,3 +73,10 @@ Chrome Web Store に指定するスクリーンショット:
 - `docs/store-assets/store-screenshot-01-item-sender.png` - 1280x800 PNG
 - `docs/store-assets/store-screenshot-02-checkbox.png` - 1280x800 PNG
 - `docs/store-assets/store-screenshot-03-safety.png` - 1280x800 PNG
+
+## Promotional Tiles
+
+Chrome Web Store に指定するプロモーションタイル:
+
+- `docs/store-assets/promo-small.png` - 440x280 PNG
+- `docs/store-assets/promo-marquee.png` - 1400x560 PNG
