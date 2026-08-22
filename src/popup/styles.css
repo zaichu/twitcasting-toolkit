@@ -220,10 +220,23 @@ input:disabled {
   gap: 12px;
 }
 
+.recovery-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7e0dc;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
 .notification-setting {
-  padding: 10px 2px;
+  padding-top: 8px;
   border-top: 1px solid #d8e1dd;
-  border-bottom: 1px solid #d8e1dd;
+}
+
+.recovery-panel > .notification-setting:first-child {
+  padding-top: 0;
+  border-top: none;
 }
 
 .switch-row span {
