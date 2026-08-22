@@ -395,6 +395,25 @@ h1 {
   font-size: 13px;
 }
 
+.recovery-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d7e0dc;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.recovery-panel .status {
+  font-size: 12px;
+  color: #607078;
+}
+
+.recovery-panel .switch-row {
+  padding-top: 8px;
+  border-top: 1px solid #d8e1dd;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
