@@ -81,16 +81,27 @@ const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
   return typeof enabled === "boolean" ? enabled : true;
 };
 
-const notifyPointRecoveryCompleted = (availablePoints: number | undefined): void => {
-  chrome.notifications.create(`twitcasting-toolkit:point-recovery:${Date.now()}`, {
-    type: "basic",
-    iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
-    title: "TwitCasting Toolkit",
-    message:
-      availablePoints !== undefined
-        ? `無料コインが回復しました(利用可能 ${availablePoints} pt)`
-        : "無料コインが回復しました"
-  });
+const notifyPointRecoveryCompleted = async (availablePoints: number | undefined): Promise<void> => {
+  const permissionLevel = await chrome.notifications.getPermissionLevel();
+  await logDebug(`notifyPointRecoveryCompleted: permissionLevel=${permissionLevel}`);
+
+  try {
+    const notificationId = await chrome.notifications.create(
+      `twitcasting-toolkit:point-recovery:${Date.now()}`,
+      {
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
+        title: "TwitCasting Toolkit",
+        message:
+          availablePoints !== undefined
+            ? `無料コインが回復しました(利用可能 ${availablePoints} pt)`
+            : "無料コインが回復しました"
+      }
+    );
+    await logDebug(`notifyPointRecoveryCompleted: created notificationId=${notificationId}`);
+  } catch (error) {
+    await logDebug(`notifyPointRecoveryCompleted: create failed (${String(error)})`);
+  }
 };
 
 // 回復予定時刻が判明していればその時刻付近に一度だけ再チェックする。
@@ -127,7 +138,7 @@ const evaluateAndPersistSnapshot = async (
   if (didPointRecoveryComplete(previousSnapshot, currentSnapshot, options)) {
     if (await isPointRecoveryNotificationEnabled()) {
       await logDebug(`${source}: recovery completed -> notify`);
-      notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
+      await notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
     } else {
       await logDebug(`${source}: recovery completed but notification disabled by settings`);
     }
