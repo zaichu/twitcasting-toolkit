@@ -70,10 +70,10 @@ TwitCasting ページ上で、チェックボックス操作やアイテム送�
 
 - `npm test`
 - `npm run typecheck`
-- `npm run build`
+- `npm run package:release`(`npm run build` を含む)
 - `dist/manifest.json` の `name` が `TwitCasting Toolkit`
 - `dist/manifest.json` の `version` が Chrome Web Store 上の公開済みバージョンより大きい
-- `release/twitcasting-toolkit-2.0.7.zip` を Chrome Web Store にアップロード
+- `release/twitcasting-toolkit-<version>.zip`(`package.json` の `version` に対応するファイル)を Chrome Web Store にアップロード
 
 ## Store Screenshots
 
