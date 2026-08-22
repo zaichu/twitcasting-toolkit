@@ -15,6 +15,11 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
   - 指定回数だけ送信操作を試行
   - 最大 20 回、クリック間隔 300-5000ms
   - ポイント不足が表示された場合は処理を中断
+- 無料コイン回復通知
+  - ポイントページの「あと◯時間◯分で回復」表示から回復予定時刻を算出し、その時刻付近で 1 回だけ確認
+  - 回復待ちでない間、または予定時刻を算出できない間は 30 分間隔でバックグラウンド確認
+  - ブラウザ起動時にも即座に確認するため、起動時点で既に回復済みだった場合も通知される
+  - 「回復待ち」表示が解消されたタイミングで OS のデスクトップ通知を表示
 
 ## 方針
 
@@ -27,7 +32,9 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
 
 - `activeTab`: popup から現在の TwitCasting タブへ操作を送るため
 - `scripting`: content script がまだ入っていない既存タブへ、popup から復旧注入するため
-- `storage`: ホスト別の設定を保存するため
+- `storage`: ホスト別の設定、ログイン中ユーザー ID、直近のポイント状態を保存するため
+- `alarms`: 無料コイン回復確認をバックグラウンドで定期実行するため
+- `notifications`: 無料コインの回復完了をデスクトップ通知するため
 - `https://twitcasting.tv/*`, `https://*.twitcasting.tv/*`: TwitCasting 上でのみ content script を動かすため
 
 ## 開発
@@ -39,6 +46,22 @@ npm run build
 ```
 
 ビルド後、Chrome の `chrome://extensions` でデベロッパーモードを有効にし、`dist/` を「パッケージ化されていない拡張機能」として読み込んでください。
+
+### WSL 環境での注意
+
+WSL 上でビルドし、Windows 側の Chrome/Vivaldi へ `\\wsl.localhost\...` の UNC パスをそのまま指定して読み込むと、
+`manifest.json` の `host_permissions` が正しく認識されず、TwitCasting ページへの content script 注入が行われない
+(サイトへのアクセス権が「ありません」と表示される)ことを確認している。WSL 環境で動作確認する場合は、
+`dist/` を Windows 側のローカルドライブ(例: `C:\temp\...`)へコピーしてから読み込むこと。
+
+## Git hooks
+
+`npm install` を実行すると `prepare` スクリプトが `core.hooksPath` を `.githooks` に設定し、以下が自動実行されます。
+
+- `pre-commit`: `npm run typecheck` / `npm test`
+- `pre-push`: `npm run build` と、content script バンドルに ESM `import`/`export` 構文が混入していないかの検証(`scripts/checkContentScriptBundle.mjs`)
+
+content script は classic script として読み込まれるため、popup や background と共有するモジュールを増やすと Rollup のコード分割で `import` 文が紛れ込み、ビルドは成功してもブラウザ上で読み込みエラーになることがあります。`pre-push` の検証はこれを push 前に検出します。
 
 ## コマンド
 

@@ -27,7 +27,12 @@ export const normalizeSettings = (value: unknown): ExtensionSettings => {
     Object.entries(rawCheckboxRules).filter(([, rule]) => isCheckboxRule(rule))
   );
 
-  return { checkboxRules };
+  const pointRecoveryNotificationEnabled =
+    typeof rawSettings.pointRecoveryNotificationEnabled === "boolean"
+      ? rawSettings.pointRecoveryNotificationEnabled
+      : DEFAULT_SETTINGS.pointRecoveryNotificationEnabled;
+
+  return { checkboxRules, pointRecoveryNotificationEnabled };
 };
 
 export const getSettings = async (): Promise<ExtensionSettings> => {
@@ -56,6 +61,16 @@ export const saveCheckboxRule = async (
       [host]: rule
     }
   };
+
+  await saveSettings(nextSettings);
+  return nextSettings;
+};
+
+export const savePointRecoveryNotificationEnabled = async (
+  enabled: boolean
+): Promise<ExtensionSettings> => {
+  const settings = await getSettings();
+  const nextSettings = { ...settings, pointRecoveryNotificationEnabled: enabled };
 
   await saveSettings(nextSettings);
   return nextSettings;

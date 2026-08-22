@@ -6,6 +6,8 @@
   "manifest_version": 3,
   "permissions": [
     "activeTab",
+    "alarms",
+    "notifications",
     "scripting",
     "storage"
   ],
@@ -13,6 +15,10 @@
     "https://twitcasting.tv/*",
     "https://*.twitcasting.tv/*"
   ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
       "matches": [
