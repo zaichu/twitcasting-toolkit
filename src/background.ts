@@ -84,7 +84,7 @@ const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
 const notifyPointRecoveryCompleted = (availablePoints: number | undefined): void => {
   chrome.notifications.create(`twitcasting-toolkit:point-recovery:${Date.now()}`, {
     type: "basic",
-    iconUrl: "icons/icon-128.png",
+    iconUrl: chrome.runtime.getURL("icons/icon-128.png"),
     title: "TwitCasting Toolkit",
     message:
       availablePoints !== undefined
