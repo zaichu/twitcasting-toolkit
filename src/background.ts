@@ -11,6 +11,24 @@ import {
   PointRecoverySnapshot
 } from "./features/pointRecovery/pointRecoveryNotifier";
 
+// content.ts の POINT_RECOVERY_OBSERVED_MESSAGE_TYPE と同じ値。
+const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
+
+type PointRecoveryObservedMessage = {
+  __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
+  snapshot: PointRecoverySnapshot;
+};
+
+const isPointRecoveryObservedMessage = (value: unknown): value is PointRecoveryObservedMessage => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const message = value as Partial<PointRecoveryObservedMessage>;
+
+  return message.__type === POINT_RECOVERY_OBSERVED_MESSAGE_TYPE && isPointRecoverySnapshot(message.snapshot);
+};
+
 // 動作確認用のデバッグログ。Service Worker の console は起動直後のログを
 // 見逃しやすいため、chrome.storage.local にも直近件数を残す。
 // 原因調査が終わり次第、削除予定の一時対応。
@@ -75,6 +93,28 @@ const scheduleRecheck = async (snapshot: PointRecoverySnapshot): Promise<void> =
   await logDebug(`scheduleRecheck: alarm set for +${Math.round(delayMs / 1000)}s`);
 };
 
+// 通知判定・保存・次回チェックのスケジューリングを一箇所にまとめる。
+// fetch で取得したスナップショット、popup 経由で観測されたスナップショットの
+// どちらもここを通す。
+const evaluateAndPersistSnapshot = async (
+  currentSnapshot: PointRecoverySnapshot,
+  source: string
+): Promise<void> => {
+  const previousSnapshot = await getStoredSnapshot();
+
+  await logDebug(
+    `${source}: previous=${JSON.stringify(previousSnapshot)} current=${JSON.stringify(currentSnapshot)}`
+  );
+
+  if (didPointRecoveryComplete(previousSnapshot, currentSnapshot)) {
+    await logDebug(`${source}: recovery completed -> notify`);
+    notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
+  }
+
+  await saveSnapshot(currentSnapshot);
+  await scheduleRecheck(currentSnapshot);
+};
+
 const checkPointRecovery = async (trigger: string): Promise<void> => {
   await logDebug(`checkPointRecovery start (trigger=${trigger})`);
 
@@ -104,19 +144,14 @@ const checkPointRecovery = async (trigger: string): Promise<void> => {
   }
 
   const currentSnapshot = parsePointRecoverySnapshotFromHtml(html);
-  const previousSnapshot = await getStoredSnapshot();
+  await evaluateAndPersistSnapshot(currentSnapshot, "checkPointRecovery");
+};
 
-  await logDebug(
-    `checkPointRecovery: previous=${JSON.stringify(previousSnapshot)} current=${JSON.stringify(currentSnapshot)}`
-  );
-
-  if (didPointRecoveryComplete(previousSnapshot, currentSnapshot)) {
-    await logDebug("checkPointRecovery: recovery completed -> notify");
-    notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
-  }
-
-  await saveSnapshot(currentSnapshot);
-  await scheduleRecheck(currentSnapshot);
+// popup 操作(アイテム候補取得)で content script が観測した最新のポイント状態。
+// background は 30 分間隔でしかポイント状態を確認しないため、これが無いと
+// popup を使うだけでは回復待ち検知(recheck アラーム)が始まらない。
+const handleObservedSnapshot = async (snapshot: PointRecoverySnapshot): Promise<void> => {
+  await evaluateAndPersistSnapshot(snapshot, "observed");
 };
 
 // periodInMinutes だけで再作成すると起動のたびに次回発火が延期されてしまうため、
@@ -146,6 +181,12 @@ void logDebug("background script evaluated");
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POINT_RECOVERY_WATCH_ALARM_NAME || alarm.name === POINT_RECOVERY_RECHECK_ALARM_NAME) {
     void checkPointRecovery(alarm.name);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (isPointRecoveryObservedMessage(message)) {
+    void handleObservedSnapshot(message.snapshot);
   }
 });
 
