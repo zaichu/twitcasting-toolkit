@@ -155,6 +155,26 @@ describe("didPointRecoveryComplete", () => {
       )
     ).toBe(false);
   });
+
+  it("notifyWhenPreviousUnknown指定時、前回 undefined でも満タンなら true", () => {
+    expect(
+      didPointRecoveryComplete(
+        undefined,
+        { hasPendingRecovery: false, availablePoints: 100 },
+        { notifyWhenPreviousUnknown: true }
+      )
+    ).toBe(true);
+  });
+
+  it("notifyWhenPreviousUnknown指定時、前回 undefined かつ回復待ちなら false", () => {
+    expect(
+      didPointRecoveryComplete(
+        undefined,
+        { hasPendingRecovery: true, availablePoints: 50 },
+        { notifyWhenPreviousUnknown: true }
+      )
+    ).toBe(false);
+  });
 });
 
 describe("getNextCheckDelayMs", () => {

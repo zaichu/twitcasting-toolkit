@@ -220,6 +220,12 @@ input:disabled {
   gap: 12px;
 }
 
+.notification-setting {
+  padding: 10px 2px;
+  border-top: 1px solid #d8e1dd;
+  border-bottom: 1px solid #d8e1dd;
+}
+
 .switch-row span {
   display: grid;
   gap: 2px;

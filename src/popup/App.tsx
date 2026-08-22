@@ -12,7 +12,7 @@ import {
   PointRecovery,
   PointStatus
 } from "../extensionTypes";
-import { getSettings, saveCheckboxRule } from "../storage";
+import { getSettings, savePointRecoveryNotificationEnabled, saveCheckboxRule } from "../storage";
 
 const MAX_POPUP_ITEM_SEND_COUNT = 20;
 const ITEM_SEND_DELAY_MS = 300;
@@ -380,9 +380,14 @@ export const App = () => {
   const [itemResult, setItemResult] = useState<ItemSendResult>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [pointRecoveryNotificationEnabled, setPointRecoveryNotificationEnabled] = useState(true);
 
   const refresh = async () => {
     setError(undefined);
+
+    const settings = await getSettings();
+    setPointRecoveryNotificationEnabled(settings.pointRecoveryNotificationEnabled);
+
     const activeTab = await getActiveTab();
     setTab(activeTab);
 
@@ -396,7 +401,6 @@ export const App = () => {
       return;
     }
 
-    const settings = await getSettings();
     setCheckboxRule(
       settings.checkboxRules[activeTab.host] ?? { autoApply: false, action: "check" }
     );
@@ -511,6 +515,11 @@ export const App = () => {
     }
   };
 
+  const updatePointRecoveryNotificationEnabled = async (enabled: boolean) => {
+    setPointRecoveryNotificationEnabled(enabled);
+    await savePointRecoveryNotificationEnabled(enabled);
+  };
+
   const sendItem = async () => {
     if (!tab || !selectedItem) {
       return;
@@ -561,6 +570,20 @@ export const App = () => {
           <p>{tab?.host ?? "TwitCasting ページのみ対応"}</p>
         </div>
       </header>
+
+      <label className="switch-row notification-setting">
+        <span>
+          <strong>無料コイン回復通知</strong>
+          <small>回復したらデスクトップ通知でお知らせ</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={pointRecoveryNotificationEnabled}
+          onChange={(event) =>
+            void updatePointRecoveryNotificationEnabled(event.currentTarget.checked)
+          }
+        />
+      </label>
 
       <nav className="tabs" aria-label="ツール">
         <button

@@ -13,6 +13,9 @@ import {
 
 // content.ts の POINT_RECOVERY_OBSERVED_MESSAGE_TYPE と同じ値。
 const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
+// extensionTypes.ts の SETTINGS_KEY と同じ値。値の import による chunk 分割を
+// 避けるため文字列を複製する。
+const SETTINGS_KEY = "twitCastingToolkitSettings";
 
 type PointRecoveryObservedMessage = {
   __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
@@ -64,6 +67,20 @@ const saveSnapshot = (snapshot: PointRecoverySnapshot): Promise<void> => {
   return chrome.storage.local.set({ [POINT_RECOVERY_SNAPSHOT_KEY]: snapshot });
 };
 
+const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
+  const stored = await chrome.storage.sync.get(SETTINGS_KEY);
+  const settings = stored[SETTINGS_KEY];
+
+  if (!settings || typeof settings !== "object") {
+    return true;
+  }
+
+  const enabled = (settings as { pointRecoveryNotificationEnabled?: unknown })
+    .pointRecoveryNotificationEnabled;
+
+  return typeof enabled === "boolean" ? enabled : true;
+};
+
 const notifyPointRecoveryCompleted = (availablePoints: number | undefined): void => {
   chrome.notifications.create(`twitcasting-toolkit:point-recovery:${Date.now()}`, {
     type: "basic",
@@ -98,7 +115,8 @@ const scheduleRecheck = async (snapshot: PointRecoverySnapshot): Promise<void> =
 // どちらもここを通す。
 const evaluateAndPersistSnapshot = async (
   currentSnapshot: PointRecoverySnapshot,
-  source: string
+  source: string,
+  options?: { notifyWhenPreviousUnknown?: boolean }
 ): Promise<void> => {
   const previousSnapshot = await getStoredSnapshot();
 
@@ -106,9 +124,13 @@ const evaluateAndPersistSnapshot = async (
     `${source}: previous=${JSON.stringify(previousSnapshot)} current=${JSON.stringify(currentSnapshot)}`
   );
 
-  if (didPointRecoveryComplete(previousSnapshot, currentSnapshot)) {
-    await logDebug(`${source}: recovery completed -> notify`);
-    notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
+  if (didPointRecoveryComplete(previousSnapshot, currentSnapshot, options)) {
+    if (await isPointRecoveryNotificationEnabled()) {
+      await logDebug(`${source}: recovery completed -> notify`);
+      notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
+    } else {
+      await logDebug(`${source}: recovery completed but notification disabled by settings`);
+    }
   }
 
   await saveSnapshot(currentSnapshot);
@@ -144,7 +166,12 @@ const checkPointRecovery = async (trigger: string): Promise<void> => {
   }
 
   const currentSnapshot = parsePointRecoverySnapshotFromHtml(html);
-  await evaluateAndPersistSnapshot(currentSnapshot, "checkPointRecovery");
+  // ブラウザ起動/拡張機能の読み込み直後は、前回の観測が無くても現在満タンなら
+  // 「回復済み」として通知する(前回観測が無いだけの通常チェックとは区別する)。
+  const isStartupTrigger = trigger === "onInstalled" || trigger === "onStartup";
+  await evaluateAndPersistSnapshot(currentSnapshot, "checkPointRecovery", {
+    notifyWhenPreviousUnknown: isStartupTrigger
+  });
 };
 
 // popup 操作(アイテム候補取得)で content script が観測した最新のポイント状態。

@@ -7,6 +7,7 @@ export type CheckboxRule = {
 
 export type ExtensionSettings = {
   checkboxRules: Record<string, CheckboxRule>;
+  pointRecoveryNotificationEnabled: boolean;
 };
 
 export type CheckboxState = {
@@ -96,5 +97,6 @@ export type ExtensionMessage =
 export const SETTINGS_KEY = "twitCastingToolkitSettings";
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  checkboxRules: {}
+  checkboxRules: {},
+  pointRecoveryNotificationEnabled: true
 };
