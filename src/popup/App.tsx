@@ -717,20 +717,6 @@ export const App = () => {
             </div>
           </div>
 
-          <label className="switch-row notification-setting">
-            <span>
-              <strong>無料コイン回復通知</strong>
-              <small>回復したらデスクトップ通知でお知らせ</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={pointRecoveryNotificationEnabled}
-              onChange={(event) =>
-                void updatePointRecoveryNotificationEnabled(event.currentTarget.checked)
-              }
-            />
-          </label>
-
           <div className="point-summary" aria-label="ポイント情報">
             {pointSummaryItems.map((item) => (
               <div key={item.label}>
@@ -740,11 +726,27 @@ export const App = () => {
             ))}
           </div>
 
-          {displayPointRecovery && (
-            <p className="point-recovery" aria-label="ポイント回復予定">
-              {displayPointRecovery.remainingText} {displayPointRecovery.recoveredPoints} ptに回復
-            </p>
-          )}
+          <div className="recovery-panel" aria-label="無料コイン回復">
+            {displayPointRecovery && (
+              <p className="point-recovery" aria-label="ポイント回復予定">
+                {displayPointRecovery.remainingText} {displayPointRecovery.recoveredPoints} ptに回復
+              </p>
+            )}
+
+            <label className="switch-row notification-setting">
+              <span>
+                <strong>無料コイン回復通知</strong>
+                <small>回復したらデスクトップ通知でお知らせ</small>
+              </span>
+              <input
+                type="checkbox"
+                checked={pointRecoveryNotificationEnabled}
+                onChange={(event) =>
+                  void updatePointRecoveryNotificationEnabled(event.currentTarget.checked)
+                }
+              />
+            </label>
+          </div>
 
           <div className="field">
             <label htmlFor="item-count-input">回数</label>
