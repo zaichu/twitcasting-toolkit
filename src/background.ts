@@ -11,6 +11,23 @@ import {
   PointRecoverySnapshot
 } from "./features/pointRecovery/pointRecoveryNotifier";
 
+// 動作確認用のデバッグログ。Service Worker の console は起動直後のログを
+// 見逃しやすいため、chrome.storage.local にも直近件数を残す。
+// 原因調査が終わり次第、削除予定の一時対応。
+const DEBUG_LOG_KEY = "twitCastingToolkitDebugLog";
+const DEBUG_LOG_MAX_ENTRIES = 50;
+
+const logDebug = async (message: string): Promise<void> => {
+  const entry = `${new Date().toISOString()} ${message}`;
+  console.log(`[TwitCasting Toolkit] ${entry}`);
+
+  const stored = await chrome.storage.local.get(DEBUG_LOG_KEY);
+  const currentLog = Array.isArray(stored[DEBUG_LOG_KEY]) ? (stored[DEBUG_LOG_KEY] as string[]) : [];
+  const nextLog = [...currentLog, entry].slice(-DEBUG_LOG_MAX_ENTRIES);
+
+  await chrome.storage.local.set({ [DEBUG_LOG_KEY]: nextLog });
+};
+
 const getStoredLoggedInUserId = async (): Promise<string | undefined> => {
   const stored = await chrome.storage.local.get(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY);
   const value = stored[POINT_RECOVERY_LOGGED_IN_USER_ID_KEY];
@@ -44,22 +61,27 @@ const notifyPointRecoveryCompleted = (availablePoints: number | undefined): void
 // 回復予定時刻が判明していればその時刻付近に一度だけ再チェックする。
 // 判明しない場合(表記が変わった、回復待ちでない等)は POINT_RECOVERY_WATCH_ALARM_NAME の
 // 定期実行に検知を委ねる。
-const scheduleRecheck = (snapshot: PointRecoverySnapshot): void => {
+const scheduleRecheck = async (snapshot: PointRecoverySnapshot): Promise<void> => {
   const delayMs = getNextCheckDelayMs(snapshot);
 
   if (delayMs === undefined) {
+    await logDebug("scheduleRecheck: skip (not pending or unparsable remainingText)");
     return;
   }
 
-  void chrome.alarms.create(POINT_RECOVERY_RECHECK_ALARM_NAME, {
+  await chrome.alarms.create(POINT_RECOVERY_RECHECK_ALARM_NAME, {
     when: Date.now() + delayMs
   });
+  await logDebug(`scheduleRecheck: alarm set for +${Math.round(delayMs / 1000)}s`);
 };
 
-const checkPointRecovery = async (): Promise<void> => {
+const checkPointRecovery = async (trigger: string): Promise<void> => {
+  await logDebug(`checkPointRecovery start (trigger=${trigger})`);
+
   const userId = await getStoredLoggedInUserId();
 
   if (!userId) {
+    await logDebug("checkPointRecovery: no stored userId, abort");
     return;
   }
 
@@ -71,23 +93,30 @@ const checkPointRecovery = async (): Promise<void> => {
     });
 
     if (!response.ok) {
+      await logDebug(`checkPointRecovery: fetch not ok (status=${response.status})`);
       return;
     }
 
     html = await response.text();
-  } catch {
+  } catch (error) {
+    await logDebug(`checkPointRecovery: fetch failed (${String(error)})`);
     return;
   }
 
   const currentSnapshot = parsePointRecoverySnapshotFromHtml(html);
   const previousSnapshot = await getStoredSnapshot();
 
+  await logDebug(
+    `checkPointRecovery: previous=${JSON.stringify(previousSnapshot)} current=${JSON.stringify(currentSnapshot)}`
+  );
+
   if (didPointRecoveryComplete(previousSnapshot, currentSnapshot)) {
+    await logDebug("checkPointRecovery: recovery completed -> notify");
     notifyPointRecoveryCompleted(currentSnapshot.availablePoints);
   }
 
   await saveSnapshot(currentSnapshot);
-  scheduleRecheck(currentSnapshot);
+  await scheduleRecheck(currentSnapshot);
 };
 
 // periodInMinutes だけで再作成すると起動のたびに次回発火が延期されてしまうため、
@@ -106,16 +135,19 @@ const ensureWatchAlarm = async (): Promise<void> => {
 
 // ブラウザ起動時点で既に回復済みになっているケースを次のアラームまで
 // 待たせないよう、起動直後にも一度確認する。
-const handleStartup = (): void => {
+const handleStartup = (source: string): void => {
+  void logDebug(`handleStartup fired (source=${source})`);
   void ensureWatchAlarm();
-  void checkPointRecovery();
+  void checkPointRecovery(source);
 };
+
+void logDebug("background script evaluated");
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POINT_RECOVERY_WATCH_ALARM_NAME || alarm.name === POINT_RECOVERY_RECHECK_ALARM_NAME) {
-    void checkPointRecovery();
+    void checkPointRecovery(alarm.name);
   }
 });
 
-chrome.runtime.onInstalled.addListener(handleStartup);
-chrome.runtime.onStartup.addListener(handleStartup);
+chrome.runtime.onInstalled.addListener(() => handleStartup("onInstalled"));
+chrome.runtime.onStartup.addListener(() => handleStartup("onStartup"));
