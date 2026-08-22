@@ -417,7 +417,10 @@ export const App = () => {
     void refresh();
   }, []);
 
-  const loadItemCandidates = async (targetTab?: ActiveTab) => {
+  const loadItemCandidates = async (
+    targetTab?: ActiveTab,
+    options?: { resetResult?: boolean }
+  ) => {
     const currentTab = targetTab ?? tab;
 
     if (!currentTab) {
@@ -426,7 +429,10 @@ export const App = () => {
 
     setBusy(true);
     setError(undefined);
-    setItemResult(undefined);
+
+    if (options?.resetResult !== false) {
+      setItemResult(undefined);
+    }
 
     try {
       const result = await sendToTab<ItemCandidateListResult>(currentTab.id, {
@@ -533,6 +539,9 @@ export const App = () => {
     } finally {
       setBusy(false);
     }
+
+    // 送信で消費したポイント状態を反映し、background の回復検知にも同期する。
+    await loadItemCandidates(tab, { resetResult: false });
   };
 
   const selectedItem = itemCandidates.find((candidate) => candidate.index === selectedItemIndex);
