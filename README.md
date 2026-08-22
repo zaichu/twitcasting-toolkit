@@ -47,6 +47,13 @@ npm run build
 
 ビルド後、Chrome の `chrome://extensions` でデベロッパーモードを有効にし、`dist/` を「パッケージ化されていない拡張機能」として読み込んでください。
 
+### WSL 環境での注意
+
+WSL 上でビルドし、Windows 側の Chrome/Vivaldi へ `\\wsl.localhost\...` の UNC パスをそのまま指定して読み込むと、
+`manifest.json` の `host_permissions` が正しく認識されず、TwitCasting ページへの content script 注入が行われない
+(サイトへのアクセス権が「ありません」と表示される)ことを確認している。WSL 環境で動作確認する場合は、
+`dist/` を Windows 側のローカルドライブ(例: `C:\temp\...`)へコピーしてから読み込むこと。
+
 ## Git hooks
 
 `npm install` を実行すると `prepare` スクリプトが `core.hooksPath` を `.githooks` に設定し、以下が自動実行されます。
