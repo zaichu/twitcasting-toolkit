@@ -4,6 +4,7 @@
   "version": "2.0.5",
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "package:release": "npm run build && node scripts/package-release.mjs",

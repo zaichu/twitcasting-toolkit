@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+echo "[pre-push] npm run build"
+npm run build
+
+echo "[pre-push] node scripts/checkContentScriptBundle.mjs"
+node scripts/checkContentScriptBundle.mjs

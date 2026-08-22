@@ -7,6 +7,7 @@
 - ビルド構成変更後は `npm run build`
 - Chrome 拡張として確認するときは `dist/` を「パッケージ化されていない拡張機能」として読み込む
 - 手動確認は `https://twitcasting.tv/` 配下のページで行う
+- `npm install` 後は `.githooks` の pre-commit(typecheck/test)・pre-push(build/content script バンドル検証)が自動で有効になる。フックが失敗したまま `--no-verify` で回避しない
 
 ## 確認観点
 

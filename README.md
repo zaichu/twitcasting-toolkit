@@ -45,6 +45,15 @@ npm run build
 
 ビルド後、Chrome の `chrome://extensions` でデベロッパーモードを有効にし、`dist/` を「パッケージ化されていない拡張機能」として読み込んでください。
 
+## Git hooks
+
+`npm install` を実行すると `prepare` スクリプトが `core.hooksPath` を `.githooks` に設定し、以下が自動実行されます。
+
+- `pre-commit`: `npm run typecheck` / `npm test`
+- `pre-push`: `npm run build` と、content script バンドルに ESM `import`/`export` 構文が混入していないかの検証(`scripts/checkContentScriptBundle.mjs`)
+
+content script は classic script として読み込まれるため、popup や background と共有するモジュールを増やすと Rollup のコード分割で `import` 文が紛れ込み、ビルドは成功してもブラウザ上で読み込みエラーになることがあります。`pre-push` の検証はこれを push 前に検出します。
+
 ## コマンド
 
 - `npm run dev` - popup UI の開発サーバー
