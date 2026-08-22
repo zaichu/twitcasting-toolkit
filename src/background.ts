@@ -116,7 +116,7 @@ const scheduleRecheck = async (snapshot: PointRecoverySnapshot): Promise<void> =
 const evaluateAndPersistSnapshot = async (
   currentSnapshot: PointRecoverySnapshot,
   source: string,
-  options?: { notifyWhenPreviousUnknown?: boolean }
+  options?: { alwaysNotifyIfNotPending?: boolean }
 ): Promise<void> => {
   const previousSnapshot = await getStoredSnapshot();
 
@@ -166,11 +166,12 @@ const checkPointRecovery = async (trigger: string): Promise<void> => {
   }
 
   const currentSnapshot = parsePointRecoverySnapshotFromHtml(html);
-  // ブラウザ起動/拡張機能の読み込み直後は、前回の観測が無くても現在満タンなら
-  // 「回復済み」として通知する(前回観測が無いだけの通常チェックとは区別する)。
+  // ブラウザ起動/拡張機能の読み込み直後は、前回との差分に関わらず
+  // 「その時点で満タンなら常に通知する」。他のトリガー(定期見張り・recheck・
+  // popup観測)では、回復待ち→解消という差分があった時だけ通知する。
   const isStartupTrigger = trigger === "onInstalled" || trigger === "onStartup";
   await evaluateAndPersistSnapshot(currentSnapshot, "checkPointRecovery", {
-    notifyWhenPreviousUnknown: isStartupTrigger
+    alwaysNotifyIfNotPending: isStartupTrigger
   });
 };
 

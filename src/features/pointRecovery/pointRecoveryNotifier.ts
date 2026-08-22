@@ -101,10 +101,14 @@ export const isPointRecoverySnapshot = (value: unknown): value is PointRecoveryS
 export const didPointRecoveryComplete = (
   previous: PointRecoverySnapshot | undefined,
   current: PointRecoverySnapshot,
-  options?: { notifyWhenPreviousUnknown?: boolean }
+  options?: { alwaysNotifyIfNotPending?: boolean }
 ): boolean => {
+  if (options?.alwaysNotifyIfNotPending === true) {
+    return !current.hasPendingRecovery;
+  }
+
   if (!previous) {
-    return options?.notifyWhenPreviousUnknown === true && !current.hasPendingRecovery;
+    return false;
   }
 
   return previous.hasPendingRecovery && !current.hasPendingRecovery;

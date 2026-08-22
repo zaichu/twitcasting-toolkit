@@ -571,20 +571,6 @@ export const App = () => {
         </div>
       </header>
 
-      <label className="switch-row notification-setting">
-        <span>
-          <strong>無料コイン回復通知</strong>
-          <small>回復したらデスクトップ通知でお知らせ</small>
-        </span>
-        <input
-          type="checkbox"
-          checked={pointRecoveryNotificationEnabled}
-          onChange={(event) =>
-            void updatePointRecoveryNotificationEnabled(event.currentTarget.checked)
-          }
-        />
-      </label>
-
       <nav className="tabs" aria-label="ツール">
         <button
           type="button"
@@ -730,6 +716,20 @@ export const App = () => {
               )}
             </div>
           </div>
+
+          <label className="switch-row notification-setting">
+            <span>
+              <strong>無料コイン回復通知</strong>
+              <small>回復したらデスクトップ通知でお知らせ</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={pointRecoveryNotificationEnabled}
+              onChange={(event) =>
+                void updatePointRecoveryNotificationEnabled(event.currentTarget.checked)
+              }
+            />
+          </label>
 
           <div className="point-summary" aria-label="ポイント情報">
             {pointSummaryItems.map((item) => (

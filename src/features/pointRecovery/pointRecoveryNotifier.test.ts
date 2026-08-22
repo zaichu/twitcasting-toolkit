@@ -156,22 +156,32 @@ describe("didPointRecoveryComplete", () => {
     ).toBe(false);
   });
 
-  it("notifyWhenPreviousUnknown指定時、前回 undefined でも満タンなら true", () => {
+  it("alwaysNotifyIfNotPending指定時、前回 undefined でも満タンなら true", () => {
     expect(
       didPointRecoveryComplete(
         undefined,
         { hasPendingRecovery: false, availablePoints: 100 },
-        { notifyWhenPreviousUnknown: true }
+        { alwaysNotifyIfNotPending: true }
       )
     ).toBe(true);
   });
 
-  it("notifyWhenPreviousUnknown指定時、前回 undefined かつ回復待ちなら false", () => {
+  it("alwaysNotifyIfNotPending指定時、前回も今回も満タンなら true(起動時は毎回通知)", () => {
+    expect(
+      didPointRecoveryComplete(
+        { hasPendingRecovery: false, availablePoints: 100 },
+        { hasPendingRecovery: false, availablePoints: 100 },
+        { alwaysNotifyIfNotPending: true }
+      )
+    ).toBe(true);
+  });
+
+  it("alwaysNotifyIfNotPending指定時、回復待ちなら false", () => {
     expect(
       didPointRecoveryComplete(
         undefined,
         { hasPendingRecovery: true, availablePoints: 50 },
-        { notifyWhenPreviousUnknown: true }
+        { alwaysNotifyIfNotPending: true }
       )
     ).toBe(false);
   });
