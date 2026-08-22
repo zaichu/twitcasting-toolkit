@@ -7,9 +7,12 @@ import type {
   ItemSendResult
 } from "./extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "./features/checkbox/checkboxTools";
-import { listItemCandidates, sendItems } from "./features/itemSender/itemSender";
+import { getLoggedInUserId, listItemCandidates, sendItems } from "./features/itemSender/itemSender";
 
 const CONTENT_SETTINGS_KEY = "twitCastingToolkitSettings";
+// background.ts の POINT_RECOVERY_LOGGED_IN_USER_ID_KEY と同じ値。
+// content script は classic script として読み込まれ ESM import を使えないため値を複製する。
+const POINT_RECOVERY_LOGGED_IN_USER_ID_KEY = "twitCastingToolkitLoggedInUserId";
 
 const isCheckboxRule = (value: unknown): value is CheckboxRule => {
   if (!value || typeof value !== "object") {
@@ -39,6 +42,22 @@ const getCurrentCheckboxRule = async (): Promise<CheckboxRule | undefined> => {
 
   const rule = (checkboxRules as Record<string, unknown>)[window.location.host];
   return isCheckboxRule(rule) ? rule : undefined;
+};
+
+const saveLoggedInUserIdIfPresent = async (): Promise<void> => {
+  const userId = getLoggedInUserId();
+
+  if (!userId) {
+    return;
+  }
+
+  const stored = await chrome.storage.local.get(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY);
+
+  if (stored[POINT_RECOVERY_LOGGED_IN_USER_ID_KEY] === userId) {
+    return;
+  }
+
+  await chrome.storage.local.set({ [POINT_RECOVERY_LOGGED_IN_USER_ID_KEY]: userId });
 };
 
 const applyCheckboxRule = async (): Promise<CheckboxActionResult> => {
@@ -87,14 +106,13 @@ const handleMessage = (
 
 chrome.runtime.onMessage.addListener(handleMessage);
 
-if (document.readyState === "loading") {
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-      void applyCheckboxRule();
-    },
-    { once: true }
-  );
-} else {
+const runOnLoad = (): void => {
   void applyCheckboxRule();
+  void saveLoggedInUserIdIfPresent();
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", runOnLoad, { once: true });
+} else {
+  runOnLoad();
 }

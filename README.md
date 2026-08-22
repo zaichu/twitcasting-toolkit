@@ -15,6 +15,9 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
   - 指定回数だけ送信操作を試行
   - 最大 20 回、クリック間隔 300-5000ms
   - ポイント不足が表示された場合は処理を中断
+- 無料コイン回復通知
+  - ログイン中ユーザーのポイントページを 5 分間隔でバックグラウンド確認
+  - 「回復待ち」表示が解消されたタイミングで OS のデスクトップ通知を表示
 
 ## 方針
 
@@ -27,7 +30,9 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
 
 - `activeTab`: popup から現在の TwitCasting タブへ操作を送るため
 - `scripting`: content script がまだ入っていない既存タブへ、popup から復旧注入するため
-- `storage`: ホスト別の設定を保存するため
+- `storage`: ホスト別の設定、ログイン中ユーザー ID、直近のポイント状態を保存するため
+- `alarms`: 無料コイン回復確認をバックグラウンドで定期実行するため
+- `notifications`: 無料コインの回復完了をデスクトップ通知するため
 - `https://twitcasting.tv/*`, `https://*.twitcasting.tv/*`: TwitCasting 上でのみ content script を動かすため
 
 ## 開発

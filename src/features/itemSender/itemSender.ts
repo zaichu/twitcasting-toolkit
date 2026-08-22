@@ -338,7 +338,7 @@ const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined =
   return Object.keys(pointStatus).length > 0 ? pointStatus : undefined;
 };
 
-const getLoggedInUserId = (): string | undefined => {
+export const getLoggedInUserId = (): string | undefined => {
   return document.querySelector<HTMLElement>(".tw-global-header[data-user-id]")?.dataset.userId;
 };
 
