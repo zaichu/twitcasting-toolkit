@@ -90,10 +90,25 @@ const checkPointRecovery = async (): Promise<void> => {
   scheduleRecheck(currentSnapshot);
 };
 
-const ensureWatchAlarm = (): void => {
-  void chrome.alarms.create(POINT_RECOVERY_WATCH_ALARM_NAME, {
+// periodInMinutes だけで再作成すると起動のたびに次回発火が延期されてしまうため、
+// 既存のアラームが無いときだけ作成する。
+const ensureWatchAlarm = async (): Promise<void> => {
+  const existingAlarm = await chrome.alarms.get(POINT_RECOVERY_WATCH_ALARM_NAME);
+
+  if (existingAlarm) {
+    return;
+  }
+
+  await chrome.alarms.create(POINT_RECOVERY_WATCH_ALARM_NAME, {
     periodInMinutes: POINT_RECOVERY_WATCH_INTERVAL_MINUTES
   });
+};
+
+// ブラウザ起動時点で既に回復済みになっているケースを次のアラームまで
+// 待たせないよう、起動直後にも一度確認する。
+const handleStartup = (): void => {
+  void ensureWatchAlarm();
+  void checkPointRecovery();
 };
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -102,5 +117,5 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(ensureWatchAlarm);
-chrome.runtime.onStartup.addListener(ensureWatchAlarm);
+chrome.runtime.onInstalled.addListener(handleStartup);
+chrome.runtime.onStartup.addListener(handleStartup);
