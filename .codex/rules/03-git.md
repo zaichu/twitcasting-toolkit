@@ -72,7 +72,13 @@ gh pr create --base main --head feature/<topic>
 
 ## 禁止事項
 
-- `main` への直接コミット / 直接 push
+- `main` への直接コミット / 直接 push(人間・Codex・Claude いずれも)
 - 1 つの作業ブランチに複数タスクを混在させること
 - 不要な `--force` push
 - squash merge 済み・remote 削除済み・worktree 削除済みの短期ブランチ cleanup 以外で `git branch -D` を使うこと
+
+## 例外: 自動バージョンバンプ
+
+- `.github/workflows/auto-version-bump.yml` は PR が `main` にマージされた直後、`github-actions[bot]` として `main` へ直接 patch version の commit を push する
+- これは中間 PR を作らずバージョンを追従させるための唯一の自動化例外であり、人間・Codex・Claude による直接 push を許可するものではない
+- 複数 PR がほぼ同時にマージされても取りこぼさないよう `concurrency: group: version-bump-main` で直列化し、push 失敗時は最新の `main` を取り直してリトライする
