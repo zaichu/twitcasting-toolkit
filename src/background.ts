@@ -64,7 +64,17 @@ const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
   return typeof enabled === "boolean" ? enabled : true;
 };
 
+// OS 通知はトーストが数秒で自動的に消えたり、OS の通知設定に埋もれて
+// 気づかれないことがあるため、popup を開くまで消えないツールバーバッジも
+// 合わせて表示する。
+const showRecoveryBadge = async (): Promise<void> => {
+  await chrome.action.setBadgeText({ text: "●" });
+  await chrome.action.setBadgeBackgroundColor({ color: "#ff6f4b" });
+};
+
 const notifyPointRecoveryCompleted = async (availablePoints: number | undefined): Promise<void> => {
+  await showRecoveryBadge();
+
   try {
     await chrome.notifications.create(`twitcasting-toolkit:point-recovery:${Date.now()}`, {
       type: "basic",

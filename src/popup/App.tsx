@@ -419,6 +419,8 @@ export const App = () => {
 
   useEffect(() => {
     void refresh();
+    // popup を開いた = 回復通知に気づいたとみなし、ツールバーバッジを消す。
+    void chrome.action.setBadgeText({ text: "" });
   }, []);
 
   const loadItemCandidates = async (
