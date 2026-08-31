@@ -64,12 +64,34 @@ const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
   return typeof enabled === "boolean" ? enabled : true;
 };
 
+// アイコンのコーラル系アクセントカラー(#ff6f4b)を踏襲しつつ、小さい白文字の
+// バッジでも読めるよう十分に濃くした色。
+const RECOVERY_BADGE_BACKGROUND_COLOR = "#c1432b";
+const RECOVERY_BADGE_TEXT = "1";
+const RECOVERY_BADGE_TITLE = "無料コインが回復しました";
+
 // OS 通知はトーストが数秒で自動的に消えたり、OS の通知設定に埋もれて
 // 気づかれないことがあるため、popup を開くまで消えないツールバーバッジも
-// 合わせて表示する。
+// 合わせて表示する。action API の失敗が通知処理全体を止めないよう、
+// 呼び出しごとに失敗を握りつぶす。
 const showRecoveryBadge = async (): Promise<void> => {
-  await chrome.action.setBadgeText({ text: "●" });
-  await chrome.action.setBadgeBackgroundColor({ color: "#ff6f4b" });
+  try {
+    await chrome.action.setBadgeText({ text: RECOVERY_BADGE_TEXT });
+  } catch (error) {
+    console.error("[TwitCasting Toolkit] バッジ文字の設定に失敗しました", error);
+  }
+
+  try {
+    await chrome.action.setBadgeBackgroundColor({ color: RECOVERY_BADGE_BACKGROUND_COLOR });
+  } catch (error) {
+    console.error("[TwitCasting Toolkit] バッジ背景色の設定に失敗しました", error);
+  }
+
+  try {
+    await chrome.action.setTitle({ title: RECOVERY_BADGE_TITLE });
+  } catch (error) {
+    console.error("[TwitCasting Toolkit] action titleの設定に失敗しました", error);
+  }
 };
 
 const notifyPointRecoveryCompleted = async (availablePoints: number | undefined): Promise<void> => {
