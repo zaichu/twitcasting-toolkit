@@ -17,6 +17,19 @@ import { getSettings, savePointRecoveryNotificationEnabled, saveCheckboxRule } f
 const MAX_POPUP_ITEM_SEND_COUNT = 20;
 const ITEM_SEND_DELAY_MS = 300;
 
+// features/dom/domUtils.ts と同じ値。popup(このファイル)は content script
+// (itemSender.ts) が import する domUtils.ts を一緒に import すると、Vite が
+// 共有 chunk を作ってしまい content script 側に ESM import が混入してビルドが
+// 壊れる(content script は classic script として読み込まれ import を使えない)。
+// そのため値を複製する。
+const clampItemSendCount = (count: number): number => {
+  return Math.max(1, Math.min(count, MAX_POPUP_ITEM_SEND_COUNT));
+};
+
+const clampItemSendDelay = (delayMs: number): number => {
+  return Math.max(300, Math.min(delayMs, 5000));
+};
+
 type ActiveTab = {
   id: number;
   url: string;
@@ -99,7 +112,10 @@ const runItemSendInMainWorld = async (
     world: "MAIN",
     args: [request, host],
     func: async (sendRequest: ItemSendRequest, pageHost: string): Promise<ItemSendResult> => {
-      const maxItemSendCount = 20;
+      // NOTE: この func は MAIN world にシリアライズ注入されるため、外部モジュール
+      // (domUtils.ts 等) を import 参照できない。以下の DOM 操作関数は意図的に
+      // func 内に残している。count / delayMs は呼び出し側 (sendItem) で事前に
+      // クランプ済みの前提のため、ここでの clamp 再定義は不要。
       const sendButtonTimeoutMs = 10000;
       const sendButtonPollMs = 100;
       const insufficientPointsMessage = "必要なポイントが不足しています。";
@@ -110,14 +126,6 @@ const runItemSendInMainWorld = async (
 
       const wait = (ms: number): Promise<void> => {
         return new Promise((resolve) => window.setTimeout(resolve, ms));
-      };
-
-      const clampCount = (count: number): number => {
-        return Math.max(1, Math.min(count, maxItemSendCount));
-      };
-
-      const clampDelay = (delayMs: number): number => {
-        return Math.max(300, Math.min(delayMs, 5000));
       };
 
       const isDisabledElement = (element: Element): boolean => {
@@ -259,8 +267,9 @@ const runItemSendInMainWorld = async (
         return false;
       };
 
-      const count = clampCount(sendRequest.count);
-      const delayMs = clampDelay(sendRequest.delayMs);
+      // sendItem 側で clampItemSendCount / clampItemSendDelay 済みの値を前提とする。
+      const count = sendRequest.count;
+      const delayMs = sendRequest.delayMs;
       const query = sendRequest.label ?? sendRequest.query ?? sendRequest.itemId ?? "";
       let sent = 0;
 
@@ -558,8 +567,10 @@ export const App = () => {
           label: selectedItem.label,
           userId: selectedItem.userId,
           itemId: selectedItem.itemId,
-          count: itemCount,
-          delayMs: ITEM_SEND_DELAY_MS
+          // MAIN world の func 内では外部モジュールを参照できないため、
+          // popup スコープ (MAIN world ではない) で事前にクランプして渡す。
+          count: clampItemSendCount(itemCount),
+          delayMs: clampItemSendDelay(ITEM_SEND_DELAY_MS)
         },
         tab.host
       );
