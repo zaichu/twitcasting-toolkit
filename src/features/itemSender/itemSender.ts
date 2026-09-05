@@ -6,8 +6,11 @@ import type {
   PointRecovery,
   PointStatus
 } from "../../extensionTypes";
+import { clampItemSendCount, clampItemSendDelay, isDisabledElement } from "../dom/domUtils";
 
-const MAX_ITEM_SEND_COUNT = 20;
+// 既存の import 経路 (`./itemSender` からの clamp 参照) を保つための再エクスポート。実体は domUtils.ts。
+export { clampItemSendCount, clampItemSendDelay };
+
 const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
 const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
 const SEND_BUTTON_TIMEOUT_MS = 5000;
@@ -19,22 +22,6 @@ const wait = (ms: number): Promise<void> => {
 
 export const normalizeText = (text: string): string => {
   return text.replace(/\s+/g, " ").trim();
-};
-
-export const clampItemSendCount = (count: number): number => {
-  return Math.max(1, Math.min(count, MAX_ITEM_SEND_COUNT));
-};
-
-export const clampItemSendDelay = (delayMs: number): number => {
-  return Math.max(300, Math.min(delayMs, 5000));
-};
-
-const isDisabledElement = (element: Element): boolean => {
-  if (element instanceof HTMLButtonElement || element instanceof HTMLInputElement) {
-    return element.disabled;
-  }
-
-  return element.getAttribute("aria-disabled") === "true";
 };
 
 const twitCastingItemSelector = [
