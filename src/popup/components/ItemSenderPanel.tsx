@@ -4,9 +4,9 @@ import type {
   ItemSendResult,
   PointRecovery
 } from "../../extensionTypes";
+import { MAX_ITEM_SEND_COUNT } from "../../features/dom/domUtils";
 import {
   getNextItemCountFromInput,
-  MAX_POPUP_ITEM_SEND_COUNT,
   type ActiveTab,
   type PointSummaryItem
 } from "../popupHelpers";
@@ -129,7 +129,7 @@ export const ItemSenderPanel = ({
             id="item-count-input"
             type="number"
             min={1}
-            max={MAX_POPUP_ITEM_SEND_COUNT}
+            max={MAX_ITEM_SEND_COUNT}
             value={itemCount}
             onChange={(event) => {
               const value = event.currentTarget.value;

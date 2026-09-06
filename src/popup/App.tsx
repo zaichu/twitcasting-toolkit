@@ -1,20 +1,12 @@
 import { useEffect, useState } from "react";
 import { getSettings } from "../storage";
 import { resetRecoveryIndicator } from "./popupChrome";
-import {
-  getMaxItemCountFromPoints,
-  getNextItemCountFromInput,
-  getPointSummaryItems,
-  type Tool
-} from "./popupHelpers";
+import type { Tool } from "./popupHelpers";
 import { useActiveTab } from "./hooks/useActiveTab";
 import { useCheckbox } from "./hooks/useCheckbox";
 import { useItemSender } from "./hooks/useItemSender";
 import { CheckboxPanel } from "./components/CheckboxPanel";
 import { ItemSenderPanel } from "./components/ItemSenderPanel";
-
-export { getMaxItemCountFromPoints, getNextItemCountFromInput, getPointSummaryItems };
-export { resetRecoveryIndicator };
 
 export const App = () => {
   const [activeTool, setActiveTool] = useState<Tool>("item-sender");

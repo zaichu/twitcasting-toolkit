@@ -4,9 +4,9 @@ import { join } from "node:path";
 import {
   getMaxItemCountFromPoints,
   getNextItemCountFromInput,
-  getPointSummaryItems,
-  resetRecoveryIndicator
-} from "./App";
+  getPointSummaryItems
+} from "./popupHelpers";
+import { resetRecoveryIndicator } from "./popupChrome";
 
 describe("popup item sender helpers", () => {
   it("calculates the maximum send count from available points and item point cost", () => {

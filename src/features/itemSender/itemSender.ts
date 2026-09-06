@@ -13,9 +13,6 @@ import {
   parsePointRecoveryFromText
 } from "../point/pointText";
 
-// 既存の import 経路 (`./itemSender` からの clamp 参照) を保つための再エクスポート。実体は domUtils.ts。
-export { clampItemSendCount, clampItemSendDelay };
-
 const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
 const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
 const SEND_BUTTON_TIMEOUT_MS = 5000;

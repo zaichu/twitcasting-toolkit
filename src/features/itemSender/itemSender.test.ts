@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { clampItemSendCount, clampItemSendDelay } from "../dom/domUtils";
 import {
-  clampItemSendCount,
-  clampItemSendDelay,
   findItemCandidates,
   getElementLabel,
   listItemCandidates,
