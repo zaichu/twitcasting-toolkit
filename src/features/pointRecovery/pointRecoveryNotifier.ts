@@ -35,24 +35,9 @@ export const isPointRecoveryObservedMessage = (
 
 import {
   extractPointRecoveryRemainingText,
-  hasPendingPointRecoveryInText,
   parseAvailablePointsFromText,
   parseRemainingMillisecondsFromText
 } from "../point/pointText";
-
-export {
-  AVAILABLE_POINTS_TEXT_PATTERN,
-  PAID_POINTS_TEXT_PATTERN,
-  POINT_PURCHASE_HEADING_PATTERN,
-  POINT_RECOVERY_TEXT_PATTERN,
-  REMAINING_TIME_PATTERN
-} from "../point/pointText";
-export {
-  extractPointRecoveryRemainingText,
-  hasPendingPointRecoveryInText,
-  parseAvailablePointsFromText,
-  parseRemainingMillisecondsFromText
-};
 
 export const stripHtmlToText = (html: string): string => {
   return html

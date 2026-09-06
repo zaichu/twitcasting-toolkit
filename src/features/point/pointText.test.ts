@@ -74,6 +74,10 @@ describe("parseRemainingMillisecondsFromText", () => {
     );
   });
 
+  it("分のみの表記でも計算できる", () => {
+    expect(parseRemainingMillisecondsFromText("あと45分で")).toBe(45 * 60 * 1000);
+  });
+
   it("時間の単位が無ければ undefined", () => {
     expect(parseRemainingMillisecondsFromText("まもなく回復")).toBeUndefined();
   });
