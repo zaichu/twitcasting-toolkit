@@ -6,6 +6,7 @@ import type {
 } from "../../extensionTypes";
 import {
   getNextItemCountFromInput,
+  MAX_POPUP_ITEM_SEND_COUNT,
   type ActiveTab,
   type PointSummaryItem
 } from "../popupHelpers";
@@ -128,13 +129,14 @@ export const ItemSenderPanel = ({
             id="item-count-input"
             type="number"
             min={1}
-            max={20}
+            max={MAX_POPUP_ITEM_SEND_COUNT}
             value={itemCount}
-            onChange={(event) =>
+            onChange={(event) => {
+              const value = event.currentTarget.value;
               setItemCount((currentCount) =>
-                getNextItemCountFromInput(event.currentTarget.value, currentCount)
-              )
-            }
+                getNextItemCountFromInput(value, currentCount)
+              );
+            }}
           />
           <button
             type="button"
