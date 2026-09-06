@@ -33,15 +33,26 @@ export const isPointRecoveryObservedMessage = (
   );
 };
 
-const AVAILABLE_POINTS_TEXT_PATTERN =
-  /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
+import {
+  extractPointRecoveryRemainingText,
+  hasPendingPointRecoveryInText,
+  parseAvailablePointsFromText,
+  parseRemainingMillisecondsFromText
+} from "../point/pointText";
 
-const POINT_PURCHASE_HEADING_PATTERN = /([\d,]+)\s*ポイント購入/;
-
-const POINT_RECOVERY_TEXT_PATTERN = /(あと.+?で)\s*[\d,]+\s*pt\s*(?:に)?\s*回復/;
-
-const REMAINING_TIME_PATTERN =
-  /あと\s*(?:(\d+)\s*日)?\s*(?:(\d+)\s*時間)?\s*(?:(\d+)\s*分)?\s*(?:(\d+)\s*秒)?\s*で/;
+export {
+  AVAILABLE_POINTS_TEXT_PATTERN,
+  PAID_POINTS_TEXT_PATTERN,
+  POINT_PURCHASE_HEADING_PATTERN,
+  POINT_RECOVERY_TEXT_PATTERN,
+  REMAINING_TIME_PATTERN
+} from "../point/pointText";
+export {
+  extractPointRecoveryRemainingText,
+  hasPendingPointRecoveryInText,
+  parseAvailablePointsFromText,
+  parseRemainingMillisecondsFromText
+};
 
 export const stripHtmlToText = (html: string): string => {
   return html
@@ -51,48 +62,6 @@ export const stripHtmlToText = (html: string): string => {
     .replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-};
-
-export const parseAvailablePointsFromText = (text: string): number | undefined => {
-  const match = text.match(AVAILABLE_POINTS_TEXT_PATTERN) ?? text.match(POINT_PURCHASE_HEADING_PATTERN);
-
-  if (!match) {
-    return undefined;
-  }
-
-  const value = Number(match[1].replace(/,/g, ""));
-
-  return Number.isFinite(value) ? value : undefined;
-};
-
-export const extractPointRecoveryRemainingText = (text: string): string | undefined => {
-  return text.match(POINT_RECOVERY_TEXT_PATTERN)?.[1];
-};
-
-export const hasPendingPointRecoveryInText = (text: string): boolean => {
-  return extractPointRecoveryRemainingText(text) !== undefined;
-};
-
-export const parseRemainingMillisecondsFromText = (remainingText: string): number | undefined => {
-  const match = remainingText.match(REMAINING_TIME_PATTERN);
-
-  if (!match) {
-    return undefined;
-  }
-
-  const [, days, hours, minutes, seconds] = match;
-
-  if (days === undefined && hours === undefined && minutes === undefined && seconds === undefined) {
-    return undefined;
-  }
-
-  const totalSeconds =
-    Number(days ?? 0) * 24 * 60 * 60 +
-    Number(hours ?? 0) * 60 * 60 +
-    Number(minutes ?? 0) * 60 +
-    Number(seconds ?? 0);
-
-  return totalSeconds > 0 ? totalSeconds * 1000 : undefined;
 };
 
 export const parsePointRecoverySnapshotFromHtml = (html: string): PointRecoverySnapshot => {
