@@ -1,11 +1,8 @@
-// content script (itemSender.ts) 用の DOM・クランプユーティリティ。
-// chrome.scripting.executeScript の func (MAIN world) からは参照できないため、
-// MAIN world 内の同名ロジックとは意図的に分離している。詳細は src/popup/App.tsx の
-// runItemSendInMainWorld 内のコメントを参照。
-// popup (src/popup/App.tsx) はこのファイルを import せず、値を複製している。
-// content script は classic script のため ESM import を使えず、popup が
-// このファイルを import すると Vite が共有 chunk を作って content script 側に
-// import 文が混入し、ビルドが壊れるため。
+// アイテム送信用の DOM・クランプユーティリティ。popup / content 双方から import する
+// 単一ソース。content script は独立 iife ビルドのため共有してもビルドは壊れない。
+// ただし chrome.scripting.executeScript の func (MAIN world) からは参照できないため、
+// MAIN world 内の同名ロジックとは意図的に分離している。詳細は
+// src/popup/mainWorldItemSend.ts の runItemSendInMainWorld 内のコメントを参照。
 export const MAX_ITEM_SEND_COUNT = 20;
 export const MIN_ITEM_SEND_DELAY_MS = 300;
 export const MAX_ITEM_SEND_DELAY_MS = 5000;
