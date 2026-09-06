@@ -4,21 +4,20 @@ import type {
   PointStatus
 } from "../extensionTypes";
 
-export const MAX_POPUP_ITEM_SEND_COUNT = 20;
-export const ITEM_SEND_DELAY_MS = 300;
+import {
+  clampItemSendCount,
+  clampItemSendDelay,
+  MAX_ITEM_SEND_COUNT,
+  MIN_ITEM_SEND_DELAY_MS
+} from "../features/dom/domUtils";
 
-// features/dom/domUtils.ts と同じ値。popup配下のこのファイルは content script
-// (itemSender.ts) が import する domUtils.ts を一緒に import すると、Vite が
-// 共有 chunk を作ってしまい content script 側に ESM import が混入してビルドが
-// 壊れる(content script は classic script として読み込まれ import を使えない)。
-// そのため値を複製する。
-export const clampItemSendCount = (count: number): number => {
-  return Math.max(1, Math.min(count, MAX_POPUP_ITEM_SEND_COUNT));
-};
+// clamp 関数の単一ソースは features/dom/domUtils.ts。content script は独立 iife
+// ビルドのため popup と共有してもビルドは壊れない。既存の import 経路
+// (`./popupHelpers` からの clamp 参照) を保つための再エクスポート。
+export { clampItemSendCount, clampItemSendDelay };
 
-export const clampItemSendDelay = (delayMs: number): number => {
-  return Math.max(300, Math.min(delayMs, 5000));
-};
+export const MAX_POPUP_ITEM_SEND_COUNT = MAX_ITEM_SEND_COUNT;
+export const ITEM_SEND_DELAY_MS = MIN_ITEM_SEND_DELAY_MS;
 
 export type ActiveTab = {
   id: number;
