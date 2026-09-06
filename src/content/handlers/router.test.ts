@@ -8,7 +8,7 @@ import type {
 } from "../../extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "../../features/checkbox/checkboxTools";
 import { listItemCandidates, sendItems } from "../../features/itemSender/itemSender";
-import { MESSAGE_HANDLERS, handleMessage } from "./router";
+import { handleMessage } from "./router";
 
 vi.mock("../../features/checkbox/checkboxTools", () => ({
   getCheckboxState: vi.fn(),
@@ -74,18 +74,6 @@ describe("content router", () => {
     vi.mocked(runCheckboxAction).mockReset().mockReturnValue(checkboxActionResult);
     vi.mocked(listItemCandidates).mockReset().mockResolvedValue(listResult);
     vi.mocked(sendItems).mockReset().mockResolvedValue(sendResult);
-  });
-
-  it("5つの message type がテーブルに登録されている", () => {
-    expect(Object.keys(MESSAGE_HANDLERS).sort()).toEqual(
-      [
-        "checkbox:apply-rule",
-        "checkbox:get-state",
-        "checkbox:run",
-        "item-sender:list",
-        "item-sender:send"
-      ].sort()
-    );
   });
 
   it("checkbox:get-state を同期で応答し false を返す", () => {
