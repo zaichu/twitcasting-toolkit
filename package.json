@@ -6,7 +6,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && BUILD_TARGET=content vite build",
     "package:release": "npm run build && node scripts/package-release.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
