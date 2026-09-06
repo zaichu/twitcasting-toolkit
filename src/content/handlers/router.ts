@@ -2,7 +2,13 @@ import { handleCheckboxApplyRule, handleCheckboxGetState, handleCheckboxRun } fr
 import { handleItemSenderList, handleItemSenderSend } from "./itemSender";
 import type { ContentMessageHandler, ContentMessageKey } from "./types";
 
-// message type の追加はこのテーブルへの1行追加(と ContentMessageKey への追加)で済む。
+// `${feature}:${type}` が登録済みキーかを判定する型ガード。
+// `in` による絞り込みのため `as` キャストは不要。
+const isKnownMessageKey = (key: string): key is ContentMessageKey =>
+  key in MESSAGE_HANDLERS;
+
+// message type の追加は ExtensionMessage への追加とこのテーブルへの1行追加で済む。
+// ContentMessageKey は ExtensionMessage から導出されるため不足は型で検出される。
 export const MESSAGE_HANDLERS: Record<ContentMessageKey, ContentMessageHandler> = {
   "checkbox:get-state": handleCheckboxGetState,
   "checkbox:run": handleCheckboxRun,
@@ -13,22 +19,16 @@ export const MESSAGE_HANDLERS: Record<ContentMessageKey, ContentMessageHandler> 
 
 // chrome.runtime.onMessage に登録するリスナー。ディスパッチのみを行い、
 // 各 message type の処理は MESSAGE_HANDLERS に委譲する。
-// 未知の type は従来のフォールスルーと同じ既定ハンドラに流し、
-// 未知の feature は応答せず false を返す(いずれも従来通り)。
+// Handler Map に無い未知の type は何もせず false を返す。破壊的・取り消し不可な
+// 操作(send/apply-rule)へのフォールバックは行わない(02-security.md 参照)。
 export const handleMessage: ContentMessageHandler = (message, sender, sendResponse) => {
-  const handler = MESSAGE_HANDLERS[`${message.feature}:${message.type}` as ContentMessageKey];
+  const key = `${message.feature}:${message.type}`;
 
-  if (handler !== undefined) {
-    return handler(message, sender, sendResponse);
+  if (!isKnownMessageKey(key)) {
+    // メッセージ内容(ページ由来の値を含む可能性)を出さないよう固定文言のみ記録する。
+    console.warn("[twitcasting-toolkit] unknown content message, ignoring");
+    return false;
   }
 
-  if (message.feature === "checkbox") {
-    return handleCheckboxApplyRule(message, sender, sendResponse);
-  }
-
-  if (message.feature === "item-sender") {
-    return handleItemSenderSend(message, sender, sendResponse);
-  }
-
-  return false;
+  return MESSAGE_HANDLERS[key](message, sender, sendResponse);
 };

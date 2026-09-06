@@ -23,11 +23,10 @@ export type ContentMessageHandler = (
   sendResponse: ContentSendResponse
 ) => boolean;
 
-// ハンドラテーブルのキー。新しい message type の追加は、この合併型への
-// 追加と MESSAGE_HANDLERS への1行追加で済む。
-export type ContentMessageKey =
-  | "checkbox:get-state"
-  | "checkbox:run"
-  | "checkbox:apply-rule"
-  | "item-sender:list"
-  | "item-sender:send";
+// ハンドラテーブルのキー。ExtensionMessage の各バリアントから導出するため、
+// 新しい message type の追加時は MESSAGE_HANDLERS への1行追加が型で強制される
+// (不足があれば Record<ContentMessageKey, ...> の代入時にコンパイルエラーになる)。
+type MessageKeyOf<M extends ExtensionMessage> =
+  M extends ExtensionMessage ? `${M["feature"]}:${M["type"]}` : never;
+
+export type ContentMessageKey = MessageKeyOf<ExtensionMessage>;
