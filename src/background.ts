@@ -1,68 +1,19 @@
 import {
   didPointRecoveryComplete,
   getNextCheckDelayMs,
-  isPointRecoverySnapshot,
+  isPointRecoveryObservedMessage,
   parsePointRecoverySnapshotFromHtml,
-  POINT_RECOVERY_LOGGED_IN_USER_ID_KEY,
   POINT_RECOVERY_RECHECK_ALARM_NAME,
-  POINT_RECOVERY_SNAPSHOT_KEY,
   POINT_RECOVERY_WATCH_ALARM_NAME,
   POINT_RECOVERY_WATCH_INTERVAL_MINUTES,
   PointRecoverySnapshot
 } from "./features/pointRecovery/pointRecoveryNotifier";
-
-// content.ts の POINT_RECOVERY_OBSERVED_MESSAGE_TYPE と同じ値。
-const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
-// extensionTypes.ts の SETTINGS_KEY と同じ値。値の import による chunk 分割を
-// 避けるため文字列を複製する。
-const SETTINGS_KEY = "twitCastingToolkitSettings";
-
-type PointRecoveryObservedMessage = {
-  __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
-  snapshot: PointRecoverySnapshot;
-};
-
-const isPointRecoveryObservedMessage = (value: unknown): value is PointRecoveryObservedMessage => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const message = value as Partial<PointRecoveryObservedMessage>;
-
-  return message.__type === POINT_RECOVERY_OBSERVED_MESSAGE_TYPE && isPointRecoverySnapshot(message.snapshot);
-};
-
-const getStoredLoggedInUserId = async (): Promise<string | undefined> => {
-  const stored = await chrome.storage.local.get(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY);
-  const value = stored[POINT_RECOVERY_LOGGED_IN_USER_ID_KEY];
-
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-};
-
-const getStoredSnapshot = async (): Promise<PointRecoverySnapshot | undefined> => {
-  const stored = await chrome.storage.local.get(POINT_RECOVERY_SNAPSHOT_KEY);
-  const value = stored[POINT_RECOVERY_SNAPSHOT_KEY];
-
-  return isPointRecoverySnapshot(value) ? value : undefined;
-};
-
-const saveSnapshot = (snapshot: PointRecoverySnapshot): Promise<void> => {
-  return chrome.storage.local.set({ [POINT_RECOVERY_SNAPSHOT_KEY]: snapshot });
-};
-
-const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
-  const stored = await chrome.storage.sync.get(SETTINGS_KEY);
-  const settings = stored[SETTINGS_KEY];
-
-  if (!settings || typeof settings !== "object") {
-    return true;
-  }
-
-  const enabled = (settings as { pointRecoveryNotificationEnabled?: unknown })
-    .pointRecoveryNotificationEnabled;
-
-  return typeof enabled === "boolean" ? enabled : true;
-};
+import {
+  getPointRecoverySnapshot,
+  getStoredLoggedInUserId,
+  isPointRecoveryNotificationEnabled,
+  savePointRecoverySnapshot
+} from "./storage";
 
 // アイコンのコーラル系アクセントカラー(#ff6f4b)を踏襲しつつ、小さい白文字の
 // バッジでも読めるよう十分に濃くした色。
@@ -135,7 +86,7 @@ const evaluateAndPersistSnapshot = async (
   currentSnapshot: PointRecoverySnapshot,
   options?: { alwaysNotifyIfNotPending?: boolean }
 ): Promise<void> => {
-  const previousSnapshot = await getStoredSnapshot();
+  const previousSnapshot = await getPointRecoverySnapshot();
 
   if (didPointRecoveryComplete(previousSnapshot, currentSnapshot, options)) {
     if (await isPointRecoveryNotificationEnabled()) {
@@ -143,7 +94,7 @@ const evaluateAndPersistSnapshot = async (
     }
   }
 
-  await saveSnapshot(currentSnapshot);
+  await savePointRecoverySnapshot(currentSnapshot);
   await scheduleRecheck(currentSnapshot);
 };
 

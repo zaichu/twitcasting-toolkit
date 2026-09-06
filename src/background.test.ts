@@ -1,13 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { POINT_RECOVERY_SNAPSHOT_KEY, PointRecoverySnapshot } from "./features/pointRecovery/pointRecoveryNotifier";
-
-// content.ts の POINT_RECOVERY_OBSERVED_MESSAGE_TYPE と同じ値。
-const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
-
-type ObservedMessage = {
-  __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
-  snapshot: PointRecoverySnapshot;
-};
+import {
+  POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+  POINT_RECOVERY_SNAPSHOT_KEY,
+  PointRecoveryObservedMessage,
+  PointRecoverySnapshot
+} from "./features/pointRecovery/pointRecoveryNotifier";
 
 const chromeMock = {
   runtime: {
@@ -48,7 +45,7 @@ const previousSnapshot: PointRecoverySnapshot = { hasPendingRecovery: true, avai
 const currentSnapshot: PointRecoverySnapshot = { hasPendingRecovery: false, availablePoints: 100 };
 
 const dispatchRecoveryObserved = async (): Promise<void> => {
-  const message: ObservedMessage = {
+  const message: PointRecoveryObservedMessage = {
     __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
     snapshot: currentSnapshot
   };
