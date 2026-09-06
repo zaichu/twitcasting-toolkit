@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   didPointRecoveryComplete,
-  extractPointRecoveryRemainingText,
   getNextCheckDelayMs,
-  hasPendingPointRecoveryInText,
   isPointRecoverySnapshot,
-  parseAvailablePointsFromText,
   parsePointRecoverySnapshotFromHtml,
-  parseRemainingMillisecondsFromText,
   POINT_RECOVERY_RECHECK_BUFFER_MS,
   stripHtmlToText
 } from "./pointRecoveryNotifier";
+import { parseRemainingMillisecondsFromText } from "../point/pointText";
 
 describe("stripHtmlToText", () => {
   it("タグ・script・styleを除去してテキスト化する", () => {
@@ -23,56 +20,6 @@ describe("stripHtmlToText", () => {
     `;
 
     expect(stripHtmlToText(html)).toBe("利用可能ポイント 1,200");
-  });
-});
-
-describe("parseAvailablePointsFromText", () => {
-  it("利用可能ポイントの表記から数値を取得する", () => {
-    expect(parseAvailablePointsFromText("利用可能ポイント 1,200 pt")).toBe(1200);
-  });
-
-  it("該当表記が無ければ undefined を返す", () => {
-    expect(parseAvailablePointsFromText("ポイントの表記なし")).toBeUndefined();
-  });
-});
-
-describe("extractPointRecoveryRemainingText", () => {
-  it("回復待ち表記から「あと〜で」部分を取り出す", () => {
-    expect(extractPointRecoveryRemainingText("あと5時間20分で100 ptに回復")).toBe("あと5時間20分で");
-  });
-
-  it("回復待ち表記が無ければ undefined", () => {
-    expect(extractPointRecoveryRemainingText("利用可能ポイント 1,200 pt")).toBeUndefined();
-  });
-});
-
-describe("hasPendingPointRecoveryInText", () => {
-  it("回復待ち表記があれば true", () => {
-    expect(hasPendingPointRecoveryInText("あと5時間20分で100 ptに回復")).toBe(true);
-  });
-
-  it("回復待ち表記が無ければ false", () => {
-    expect(hasPendingPointRecoveryInText("利用可能ポイント 1,200 pt")).toBe(false);
-  });
-});
-
-describe("parseRemainingMillisecondsFromText", () => {
-  it("時間と分から残りミリ秒を計算する", () => {
-    expect(parseRemainingMillisecondsFromText("あと1時間50分で")).toBe((1 * 60 * 60 + 50 * 60) * 1000);
-  });
-
-  it("タグ除去で数字と単位の間に空白が入っても計算できる", () => {
-    expect(parseRemainingMillisecondsFromText("あと 11時間 28分 で")).toBe(
-      (11 * 60 * 60 + 28 * 60) * 1000
-    );
-  });
-
-  it("分のみの表記でも計算できる", () => {
-    expect(parseRemainingMillisecondsFromText("あと45分で")).toBe(45 * 60 * 1000);
-  });
-
-  it("時間の単位が無ければ undefined", () => {
-    expect(parseRemainingMillisecondsFromText("まもなく回復")).toBeUndefined();
   });
 });
 
