@@ -9,6 +9,7 @@ export default defineConfig({
       }
     },
     globals: true,
-    restoreMocks: true
+    restoreMocks: true,
+    setupFiles: ["./vitest.setup.ts"]
   }
 });

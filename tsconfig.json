@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["chrome", "node"]
+    "types": ["chrome", "node", "@testing-library/jest-dom"]
   },
   "include": ["src", "vite.config.ts"]
 }
