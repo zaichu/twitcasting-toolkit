@@ -161,21 +161,35 @@ describe("content router", () => {
     expect(sendResponse).not.toHaveBeenCalled();
   });
 
-  it("未知の checkbox type は apply-rule と同じく非同期で true を返す", async () => {
-    const sendResponse = vi.fn();
-    const message = { feature: "checkbox", type: "unknown" } as unknown as ExtensionMessage;
+  it("未知の checkbox type は無視し false を返す(apply-rule に流さない)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const sendResponse = vi.fn();
+      const message = { feature: "checkbox", type: "unknown" } as unknown as ExtensionMessage;
 
-    expect(handleMessage(message, sender, sendResponse)).toBe(true);
-    await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith({ ...checkboxState, changed: 0 })
-    );
+      expect(handleMessage(message, sender, sendResponse)).toBe(false);
+      expect(sendResponse).not.toHaveBeenCalled();
+      expect(runCheckboxAction).not.toHaveBeenCalled();
+      expect(getCheckboxState).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
-  it("未知の item-sender type は send と同じく非同期で true を返す", async () => {
-    const sendResponse = vi.fn();
-    const message = { feature: "item-sender", type: "unknown" } as unknown as ExtensionMessage;
+  it("未知の item-sender type は無視し false を返す(send に流さない)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const sendResponse = vi.fn();
+      const message = { feature: "item-sender", type: "unknown" } as unknown as ExtensionMessage;
 
-    expect(handleMessage(message, sender, sendResponse)).toBe(true);
-    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith(sendResult));
+      expect(handleMessage(message, sender, sendResponse)).toBe(false);
+      expect(sendResponse).not.toHaveBeenCalled();
+      expect(sendItems).not.toHaveBeenCalled();
+      expect(listItemCandidates).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
