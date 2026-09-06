@@ -11,6 +11,28 @@ export const POINT_RECOVERY_RECHECK_BUFFER_MS = 60_000;
 export const POINT_RECOVERY_LOGGED_IN_USER_ID_KEY = "twitCastingToolkitLoggedInUserId";
 export const POINT_RECOVERY_SNAPSHOT_KEY = "twitCastingToolkitPointRecoverySnapshot";
 
+export const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
+
+export type PointRecoveryObservedMessage = {
+  __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
+  snapshot: PointRecoverySnapshot;
+};
+
+export const isPointRecoveryObservedMessage = (
+  value: unknown
+): value is PointRecoveryObservedMessage => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const message = value as Partial<PointRecoveryObservedMessage>;
+
+  return (
+    message.__type === POINT_RECOVERY_OBSERVED_MESSAGE_TYPE &&
+    isPointRecoverySnapshot(message.snapshot)
+  );
+};
+
 const AVAILABLE_POINTS_TEXT_PATTERN =
   /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
 

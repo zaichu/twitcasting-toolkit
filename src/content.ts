@@ -1,7 +1,7 @@
 import { getLoggedInUserId } from "./features/itemSender/itemSender";
 import { applyCheckboxRule } from "./content/handlers/checkbox";
-import { POINT_RECOVERY_LOGGED_IN_USER_ID_KEY } from "./content/handlers/itemSender";
 import { handleMessage } from "./content/handlers/router";
+import { getStoredLoggedInUserId, saveLoggedInUserId } from "./storage";
 
 const saveLoggedInUserIdIfPresent = async (): Promise<void> => {
   const userId = getLoggedInUserId();
@@ -10,13 +10,11 @@ const saveLoggedInUserIdIfPresent = async (): Promise<void> => {
     return;
   }
 
-  const stored = await chrome.storage.local.get(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY);
-
-  if (stored[POINT_RECOVERY_LOGGED_IN_USER_ID_KEY] === userId) {
+  if ((await getStoredLoggedInUserId()) === userId) {
     return;
   }
 
-  await chrome.storage.local.set({ [POINT_RECOVERY_LOGGED_IN_USER_ID_KEY]: userId });
+  await saveLoggedInUserId(userId);
 };
 
 chrome.runtime.onMessage.addListener(handleMessage);

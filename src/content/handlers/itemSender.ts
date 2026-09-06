@@ -1,11 +1,7 @@
 import type { ExtensionMessage, ItemCandidateListResult } from "../../extensionTypes";
+import { POINT_RECOVERY_OBSERVED_MESSAGE_TYPE } from "../../features/pointRecovery/pointRecoveryNotifier";
 import { listItemCandidates, sendItems } from "../../features/itemSender/itemSender";
 import type { ContentMessageHandler } from "./types";
-
-// background.ts の値と同じ。content script は classic script として読み込まれ
-// ESM import を使えないため値を複製する。
-export const POINT_RECOVERY_LOGGED_IN_USER_ID_KEY = "twitCastingToolkitLoggedInUserId";
-const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
 
 // popup 操作でポイント情報が取得できたタイミングで、その内容を background の
 // スナップショットにも反映させる。background は 30 分間隔でしかポイント状態を
