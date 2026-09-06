@@ -266,13 +266,6 @@ describe("popup 表示の characterization", () => {
     );
   });
 
-  // NOTE: 回数入力欄へのキー入力自体は、App.tsx の onChange が
-  // setItemCount の updater 内で event.currentTarget を遅延参照しているため、
-  // React 19 のテスト環境(act 下)では updater 実行時に event が null 化され
-  // TypeError になる。実装に触れない方針のため、キー入力経由のクランプは
-  // 既存の純粋関数テスト(getNextItemCountFromInput)に委ね、ここでは
-  // 初期値・「最大」ボタン・無効条件という描画結果のみを固定する。
-  // 詳細はタスク報告の「気になる点」参照。
   it("7a. 回数の初期値は1で「最大」ボタンで所持ポイントから算出された回数が入る", async () => {
     setupPopup({
       listResult: {
@@ -337,6 +330,37 @@ describe("popup 表示の characterization", () => {
 
     await screen.findByRole("option", { name: /お茶/ });
     expect(screen.getByRole("button", { name: "最大" })).toBeDisabled();
+  });
+
+  it("7d. 回数欄へのキー入力でクランプされクラッシュしない", async () => {
+    setupPopup({
+      listResult: {
+        host: "twitcasting.tv",
+        candidates: [CANDIDATE_A],
+        availablePoints: 340
+      }
+    });
+    render(<App />);
+
+    expect(await screen.findByText("1 件の候補を検出")).toBeInTheDocument();
+    const input = screen.getByLabelText("回数") as HTMLInputElement;
+    expect(input.value).toBe("1");
+
+    // 範囲内の値はそのまま反映される
+    fireEvent.change(input, { target: { value: "5" } });
+    expect(input.value).toBe("5");
+
+    // 上限超過は 20 にクランプされる
+    fireEvent.change(input, { target: { value: "99" } });
+    expect(input.value).toBe("20");
+
+    // 空文字では直前の値が維持される
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input.value).toBe("20");
+
+    // 非数値では直前の値が維持される
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(input.value).toBe("20");
   });
 
   it("8. 送信実行後ポイント情報が再取得され送信結果メッセージが消えない", async () => {
