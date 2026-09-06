@@ -7,6 +7,11 @@ import type {
   PointStatus
 } from "../../extensionTypes";
 import { clampItemSendCount, clampItemSendDelay, isDisabledElement } from "../dom/domUtils";
+import {
+  parseAvailablePointsFromText,
+  parsePaidPointsFromText,
+  parsePointRecoveryFromText
+} from "../point/pointText";
 
 // 既存の import 経路 (`./itemSender` からの clamp 参照) を保つための再エクスポート。実体は domUtils.ts。
 export { clampItemSendCount, clampItemSendDelay };
@@ -92,45 +97,17 @@ const getPointFromText = (text: string): number | undefined => {
   return match ? Number(match[0]) : undefined;
 };
 
-const AVAILABLE_POINTS_TEXT_PATTERN =
-  /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
-
-const POINT_PURCHASE_HEADING_PATTERN = /([\d,]+)\s*ポイント購入/;
-
 const getAvailablePointsFromDocument = (root: ParentNode): number | undefined => {
   const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
   const text = normalizeText(container?.textContent ?? "");
-  const match = text.match(AVAILABLE_POINTS_TEXT_PATTERN) ?? text.match(POINT_PURCHASE_HEADING_PATTERN);
 
-  if (!match) {
-    return undefined;
-  }
-
-  const value = Number(match[1].replace(/,/g, ""));
-
-  return Number.isFinite(value) ? value : undefined;
+  return parseAvailablePointsFromText(text);
 };
-
-const POINT_RECOVERY_TEXT_PATTERN = /(あと.+?で)\s*([\d,]+)\s*pt\s*(?:に)?\s*回復/;
 
 const getPointRecoveryFromDocument = (root: ParentNode): PointRecovery | undefined => {
   const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
-  const match = normalizeText(container?.textContent ?? "").match(POINT_RECOVERY_TEXT_PATTERN);
 
-  if (!match) {
-    return undefined;
-  }
-
-  const recoveredPoints = Number(match[2].replace(/,/g, ""));
-
-  if (!Number.isFinite(recoveredPoints)) {
-    return undefined;
-  }
-
-  return {
-    remainingText: match[1],
-    recoveredPoints
-  };
+  return parsePointRecoveryFromText(normalizeText(container?.textContent ?? ""));
 };
 
 const getAvailablePointsFromEmbeddedScripts = (root: Document = document): number | undefined => {
@@ -268,8 +245,6 @@ type AjaxItemListResult = {
   pointStatus?: PointStatus;
 };
 
-const PAID_POINTS_TEXT_PATTERN = /有料ポイント\s*([\d,]+)\s*含む/;
-
 const getNumberFromText = (text: string | undefined): number | undefined => {
   if (!text) {
     return undefined;
@@ -300,10 +275,7 @@ const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined =
   const paidPointText =
     pointRow?.querySelector<HTMLElement>(".tw-point-having-props-display__desc")?.textContent ??
     "";
-  const paidPointsMatch = normalizeText(paidPointText).match(PAID_POINTS_TEXT_PATTERN);
-  const paidPoints = paidPointsMatch
-    ? Number(paidPointsMatch[1].replace(/,/g, ""))
-    : undefined;
+  const paidPoints = parsePaidPointsFromText(paidPointText);
   const pointStatus: PointStatus = {};
 
   if (availablePoints !== undefined) {
