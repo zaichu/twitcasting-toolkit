@@ -4,20 +4,7 @@ import type {
   PointStatus
 } from "../extensionTypes";
 
-import {
-  clampItemSendCount,
-  clampItemSendDelay,
-  MAX_ITEM_SEND_COUNT,
-  MIN_ITEM_SEND_DELAY_MS
-} from "../features/dom/domUtils";
-
-// clamp 関数の単一ソースは features/dom/domUtils.ts。content script は独立 iife
-// ビルドのため popup と共有してもビルドは壊れない。既存の import 経路
-// (`./popupHelpers` からの clamp 参照) を保つための再エクスポート。
-export { clampItemSendCount, clampItemSendDelay };
-
-export const MAX_POPUP_ITEM_SEND_COUNT = MAX_ITEM_SEND_COUNT;
-export const ITEM_SEND_DELAY_MS = MIN_ITEM_SEND_DELAY_MS;
+import { MAX_ITEM_SEND_COUNT } from "../features/dom/domUtils";
 
 export type ActiveTab = {
   id: number;
@@ -51,7 +38,7 @@ export const getMaxItemCountFromPoints = (
 
   const maxCount = Math.floor(availablePoints / point);
 
-  return maxCount > 0 ? Math.min(maxCount, MAX_POPUP_ITEM_SEND_COUNT) : undefined;
+  return maxCount > 0 ? Math.min(maxCount, MAX_ITEM_SEND_COUNT) : undefined;
 };
 
 export const getNextItemCountFromInput = (value: string, currentCount: number): number => {
@@ -65,7 +52,7 @@ export const getNextItemCountFromInput = (value: string, currentCount: number): 
     return currentCount;
   }
 
-  return Math.max(1, Math.min(Math.trunc(parsed), MAX_POPUP_ITEM_SEND_COUNT));
+  return Math.max(1, Math.min(Math.trunc(parsed), MAX_ITEM_SEND_COUNT));
 };
 
 export type PointSummaryItem = {

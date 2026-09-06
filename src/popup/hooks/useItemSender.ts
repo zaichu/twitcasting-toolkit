@@ -10,9 +10,11 @@ import { savePointRecoveryNotificationEnabled } from "../../storage";
 import { sendToTab } from "../popupChrome";
 import { runItemSendInMainWorld } from "../mainWorldItemSend";
 import {
-  ITEM_SEND_DELAY_MS,
   clampItemSendCount,
   clampItemSendDelay,
+  MIN_ITEM_SEND_DELAY_MS
+} from "../../features/dom/domUtils";
+import {
   getMaxItemCountFromPoints,
   getPointSummaryItems,
   type ActiveTab
@@ -119,7 +121,7 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
           // MAIN world の func 内では外部モジュールを参照できないため、
           // popup スコープ (MAIN world ではない) で事前にクランプして渡す。
           count: clampItemSendCount(itemCount),
-          delayMs: clampItemSendDelay(ITEM_SEND_DELAY_MS)
+          delayMs: clampItemSendDelay(MIN_ITEM_SEND_DELAY_MS)
         },
         tab.host
       );
