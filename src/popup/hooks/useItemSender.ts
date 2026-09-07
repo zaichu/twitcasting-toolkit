@@ -22,12 +22,11 @@ import {
 
 type UseItemSenderOptions = {
   tab: ActiveTab | undefined;
-  busy: boolean;
-  setBusy: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | undefined>>;
 };
 
-export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOptions) => {
+export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
+  const [itemSenderBusy, setItemSenderBusy] = useState(false);
   const [itemCandidates, setItemCandidates] = useState<ItemCandidate[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>();
   const [availablePoints, setAvailablePoints] = useState<number>();
@@ -59,7 +58,7 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
       return;
     }
 
-    setBusy(true);
+    setItemSenderBusy(true);
     setError(undefined);
 
     if (options?.resetResult !== false) {
@@ -90,7 +89,7 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
       setPointStatus(undefined);
       setError(`アイテム候補の取得に失敗しました: ${String(error)}`);
     } finally {
-      setBusy(false);
+      setItemSenderBusy(false);
     }
   };
 
@@ -106,7 +105,7 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
       return;
     }
 
-    setBusy(true);
+    setItemSenderBusy(true);
     setError(undefined);
     setItemResult(undefined);
 
@@ -129,7 +128,7 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
     } catch (error) {
       setError(`アイテム送信操作に失敗しました: ${String(error)}`);
     } finally {
-      setBusy(false);
+      setItemSenderBusy(false);
     }
 
     // 送信で消費したポイント状態を反映し、background の回復検知にも同期する。
@@ -139,10 +138,11 @@ export const useItemSender = ({ tab, busy, setBusy, setError }: UseItemSenderOpt
   const maxItemCount = getMaxItemCountFromPoints(availablePoints, selectedItem?.point);
   const pointSummaryItems = getPointSummaryItems(pointStatus, availablePoints, selectedItem?.point);
   const displayPointRecovery = pointStatus?.pointRecovery ?? pointRecovery;
-  const itemDisabled = !tab || busy || selectedItemIndex === undefined;
-  const maxItemCountDisabled = !tab || busy || maxItemCount === undefined;
+  const itemDisabled = !tab || itemSenderBusy || selectedItemIndex === undefined;
+  const maxItemCountDisabled = !tab || itemSenderBusy || maxItemCount === undefined;
 
   return {
+    itemSenderBusy,
     itemCandidates,
     selectedItemIndex,
     setSelectedItemIndex,
