@@ -76,7 +76,7 @@ export const App = () => {
       {activeTool === "checkbox" ? (
         <CheckboxPanel
           tab={tab}
-          busy={checkbox.checkboxBusy}
+          checkboxDisabled={checkbox.checkboxDisabled}
           checkboxState={checkbox.checkboxState}
           checkboxRule={checkbox.checkboxRule}
           onRunAction={(action) => void checkbox.runCheckboxAction(action)}
