@@ -11,10 +11,9 @@ import { ItemSenderPanel } from "./components/ItemSenderPanel";
 export const App = () => {
   const [activeTool, setActiveTool] = useState<Tool>("item-sender");
   const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
   const { tab, refreshTab } = useActiveTab();
   const checkbox = useCheckbox({ tab, setError });
-  const itemSender = useItemSender({ tab, busy, setBusy, setError });
+  const itemSender = useItemSender({ tab, setError });
 
   const refresh = async () => {
     setError(undefined);
@@ -86,7 +85,7 @@ export const App = () => {
       ) : (
         <ItemSenderPanel
           tab={tab}
-          busy={busy}
+          busy={itemSender.itemSenderBusy}
           itemCandidates={itemSender.itemCandidates}
           selectedItemIndex={itemSender.selectedItemIndex}
           onSelectItem={itemSender.setSelectedItemIndex}
