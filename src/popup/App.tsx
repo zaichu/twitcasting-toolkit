@@ -83,27 +83,7 @@ export const App = () => {
           onUpdateRule={(nextRule) => void checkbox.updateCheckboxRule(nextRule)}
         />
       ) : (
-        <ItemSenderPanel
-          tab={tab}
-          busy={itemSender.itemSenderBusy}
-          itemCandidates={itemSender.itemCandidates}
-          selectedItemIndex={itemSender.selectedItemIndex}
-          onSelectItem={itemSender.setSelectedItemIndex}
-          pointSummaryItems={itemSender.pointSummaryItems}
-          displayPointRecovery={itemSender.displayPointRecovery}
-          pointRecoveryNotificationEnabled={itemSender.pointRecoveryNotificationEnabled}
-          onNotificationChange={(enabled) =>
-            void itemSender.updatePointRecoveryNotificationEnabled(enabled)
-          }
-          itemCount={itemSender.itemCount}
-          setItemCount={itemSender.setItemCount}
-          maxItemCount={itemSender.maxItemCount}
-          maxItemCountDisabled={itemSender.maxItemCountDisabled}
-          itemDisabled={itemSender.itemDisabled}
-          onSendItem={() => void itemSender.sendItem()}
-          onLoadCandidates={() => void itemSender.loadItemCandidates()}
-          itemResult={itemSender.itemResult}
-        />
+        <ItemSenderPanel tab={tab} itemSender={itemSender} />
       )}
     </main>
   );

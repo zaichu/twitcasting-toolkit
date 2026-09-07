@@ -162,3 +162,5 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     clearItemState
   };
 };
+
+export type UseItemSenderResult = ReturnType<typeof useItemSender>;
