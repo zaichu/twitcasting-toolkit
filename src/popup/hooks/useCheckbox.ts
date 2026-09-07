@@ -12,12 +12,11 @@ import type { ActiveTab } from "../popupHelpers";
 
 type UseCheckboxOptions = {
   tab: ActiveTab | undefined;
-  busy: boolean;
-  setBusy: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | undefined>>;
 };
 
-export const useCheckbox = ({ tab, busy, setBusy, setError }: UseCheckboxOptions) => {
+export const useCheckbox = ({ tab, setError }: UseCheckboxOptions) => {
+  const [checkboxBusy, setCheckboxBusy] = useState(false);
   const [checkboxState, setCheckboxState] = useState<CheckboxState | CheckboxActionResult>();
   const [checkboxRule, setCheckboxRule] = useState<CheckboxRule>({
     autoApply: false,
@@ -50,7 +49,7 @@ export const useCheckbox = ({ tab, busy, setBusy, setError }: UseCheckboxOptions
       return;
     }
 
-    setBusy(true);
+    setCheckboxBusy(true);
     setError(undefined);
 
     try {
@@ -63,7 +62,7 @@ export const useCheckbox = ({ tab, busy, setBusy, setError }: UseCheckboxOptions
     } catch {
       setError("チェックボックス操作に失敗しました。");
     } finally {
-      setBusy(false);
+      setCheckboxBusy(false);
     }
   };
 
@@ -91,7 +90,8 @@ export const useCheckbox = ({ tab, busy, setBusy, setError }: UseCheckboxOptions
   return {
     checkboxState,
     checkboxRule,
-    checkboxDisabled: !tab || busy,
+    checkboxBusy,
+    checkboxDisabled: !tab || checkboxBusy,
     loadCheckboxState,
     clearCheckboxState,
     syncRuleFromSettings,

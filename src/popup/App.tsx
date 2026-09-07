@@ -13,7 +13,7 @@ export const App = () => {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const { tab, refreshTab } = useActiveTab();
-  const checkbox = useCheckbox({ tab, busy, setBusy, setError });
+  const checkbox = useCheckbox({ tab, setError });
   const itemSender = useItemSender({ tab, busy, setBusy, setError });
 
   const refresh = async () => {
@@ -77,7 +77,7 @@ export const App = () => {
       {activeTool === "checkbox" ? (
         <CheckboxPanel
           tab={tab}
-          busy={busy}
+          busy={checkbox.checkboxBusy}
           checkboxState={checkbox.checkboxState}
           checkboxRule={checkbox.checkboxRule}
           onRunAction={(action) => void checkbox.runCheckboxAction(action)}
