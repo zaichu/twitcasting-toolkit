@@ -8,7 +8,7 @@ import { formatCheckboxStatus, type ActiveTab } from "../popupHelpers";
 
 type CheckboxPanelProps = {
   tab: ActiveTab | undefined;
-  busy: boolean;
+  checkboxDisabled: boolean;
   checkboxState: CheckboxState | CheckboxActionResult | undefined;
   checkboxRule: CheckboxRule;
   onRunAction: (action: CheckboxAction) => void;
@@ -17,14 +17,12 @@ type CheckboxPanelProps = {
 
 export const CheckboxPanel = ({
   tab,
-  busy,
+  checkboxDisabled,
   checkboxState,
   checkboxRule,
   onRunAction,
   onUpdateRule
 }: CheckboxPanelProps) => {
-  const checkboxDisabled = !tab || busy;
-
   return (
     <section className="tool-panel" aria-label="チェックボックス一括操作">
       <div className="stats" aria-label="チェックボックス状態">
