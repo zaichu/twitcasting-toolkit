@@ -1,56 +1,39 @@
-import type { Dispatch, SetStateAction } from "react";
-import type {
-  ItemCandidate,
-  ItemSendResult,
-  PointRecovery
-} from "../../extensionTypes";
 import { MAX_ITEM_SEND_COUNT } from "../../features/dom/domUtils";
 import {
   getNextItemCountFromInput,
   type ActiveTab,
-  type PointSummaryItem
 } from "../popupHelpers";
+import type { UseItemSenderResult } from "../hooks/useItemSender";
 import { PointSummary } from "./PointSummary";
 
 type ItemSenderPanelProps = {
   tab: ActiveTab | undefined;
-  busy: boolean;
-  itemCandidates: ItemCandidate[];
-  selectedItemIndex: number | undefined;
-  onSelectItem: (index: number) => void;
-  pointSummaryItems: PointSummaryItem[];
-  displayPointRecovery: PointRecovery | undefined;
-  pointRecoveryNotificationEnabled: boolean;
-  onNotificationChange: (enabled: boolean) => void;
-  itemCount: number;
-  setItemCount: Dispatch<SetStateAction<number>>;
-  maxItemCount: number | undefined;
-  maxItemCountDisabled: boolean;
-  itemDisabled: boolean;
-  onSendItem: () => void;
-  onLoadCandidates: () => void;
-  itemResult: ItemSendResult | undefined;
+  itemSender: UseItemSenderResult;
 };
 
-export const ItemSenderPanel = ({
-  tab,
-  busy,
-  itemCandidates,
-  selectedItemIndex,
-  onSelectItem,
-  pointSummaryItems,
-  displayPointRecovery,
-  pointRecoveryNotificationEnabled,
-  onNotificationChange,
-  itemCount,
-  setItemCount,
-  maxItemCount,
-  maxItemCountDisabled,
-  itemDisabled,
-  onSendItem,
-  onLoadCandidates,
-  itemResult
-}: ItemSenderPanelProps) => {
+export const ItemSenderPanel = ({ tab, itemSender }: ItemSenderPanelProps) => {
+  const {
+    itemSenderBusy: busy,
+    itemCandidates,
+    selectedItemIndex,
+    setSelectedItemIndex: onSelectItem,
+    pointSummaryItems,
+    displayPointRecovery,
+    pointRecoveryNotificationEnabled,
+    updatePointRecoveryNotificationEnabled,
+    itemCount,
+    setItemCount,
+    maxItemCount,
+    maxItemCountDisabled,
+    itemDisabled,
+    sendItem,
+    loadItemCandidates,
+    itemResult,
+  } = itemSender;
+  const onNotificationChange = (enabled: boolean) =>
+    void updatePointRecoveryNotificationEnabled(enabled);
+  const onSendItem = () => void sendItem();
+  const onLoadCandidates = () => void loadItemCandidates();
   return (
     <section className="tool-panel" aria-label="アイテム送信補助">
       <div className="field">
