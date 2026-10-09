@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clampItemSendCount, clampItemSendDelay } from "../dom/domUtils";
 import {
-  findItemCandidates,
   getElementLabel,
   listItemCandidates,
   normalizeText,
-  parseGiftItemCall,
-  sendItems
+  parseGiftItemCall
 } from "./itemSender";
 
 describe("itemSender", () => {
@@ -55,7 +53,6 @@ describe("itemSender", () => {
       host: "twitcasting.tv",
       candidates: []
     });
-    expect(findItemCandidates("サイドバー")).toHaveLength(0);
   });
 
   it("lists selectable TwitCasting item candidates without text input", async () => {
@@ -238,7 +235,7 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 340,
+      pointStatus: { availablePoints: 340 },
       candidates: [
         {
           label: "コンティニューコイン 50",
@@ -278,7 +275,7 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
+      pointStatus: { availablePoints: 32 },
       candidates: [
         {
           label: "拍手 15",
@@ -310,7 +307,7 @@ describe("itemSender", () => {
     `;
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
+      pointStatus: { availablePoints: 32 },
       candidates: [
         {
           label: "拍手 15",
@@ -349,9 +346,11 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      pointRecovery: {
-        remainingText: "あと1時間50分で",
-        recoveredPoints: 132
+      pointStatus: {
+        pointRecovery: {
+          remainingText: "あと1時間50分で",
+          recoveredPoints: 132
+        }
       },
       candidates: [
         {
@@ -402,7 +401,7 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 340,
+      pointStatus: { availablePoints: 340 },
       candidates: [
         {
           label: "コンティニューコイン 50",
@@ -474,10 +473,12 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
-      pointRecovery: {
-        remainingText: "あと1時間50分で",
-        recoveredPoints: 132
+      pointStatus: {
+        availablePoints: 32,
+        pointRecovery: {
+          remainingText: "あと1時間50分で",
+          recoveredPoints: 132
+        }
       },
       candidates: [
         {
@@ -529,9 +530,11 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      pointRecovery: {
-        remainingText: "あと1時間50分で",
-        recoveredPoints: 132
+      pointStatus: {
+        pointRecovery: {
+          remainingText: "あと1時間50分で",
+          recoveredPoints: 132
+        }
       },
       candidates: [
         {
@@ -598,11 +601,6 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
-      pointRecovery: {
-        remainingText: "あと11時間28分で",
-        recoveredPoints: 102
-      },
       pointStatus: {
         availablePoints: 32,
         ownedPoints: 2,
@@ -678,7 +676,6 @@ describe("itemSender", () => {
       await vi.advanceTimersByTimeAsync(5000);
 
       await expect(resultPromise).resolves.toMatchObject({
-        availablePoints: 32,
         pointStatus: {
           availablePoints: 32
         },
@@ -731,7 +728,6 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
       pointStatus: {
         availablePoints: 32
       },
@@ -774,7 +770,7 @@ describe("itemSender", () => {
     `;
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: undefined,
+      pointStatus: undefined,
       candidates: [
         {
           label: "コンティニューコイン 50",
@@ -812,7 +808,7 @@ describe("itemSender", () => {
     `;
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      availablePoints: 32,
+      pointStatus: { availablePoints: 32 },
       candidates: [
         {
           label: "コンティニューコイン 50",
@@ -836,181 +832,7 @@ describe("itemSender", () => {
 
     expect(parseGiftItemCall(item)).toEqual({
       userId: "c:studying777",
-      itemId: "coin",
-      usePoint: true
-    });
-  });
-
-  it("clicks matching candidates with a clamped maximum count", async () => {
-    vi.useFakeTimers();
-    const onItemClick = vi.fn(() => {
-      document.querySelector("#tw-item-window-data")?.remove();
-      document.body.insertAdjacentHTML(
-        "beforeend",
-        `
-          <div id="tw-item-window-data">
-            <div class="tw-item-send-post" data-sendable="true">
-              <form id="gift_form"><button id="messagelink" type="submit">ポイントを使って送る</button></form>
-            </div>
-          </div>
-        `
-      );
-      document.querySelector("#messagelink")?.addEventListener("click", onSendClick);
-    });
-    const onSendClick = vi.fn((event: Event) => event.preventDefault());
-    document.body.innerHTML = `
-      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
-        <span class="tw-item-list-item-name">お茶</span>
-        <span class="tw-item-list-item-amount">10</span>
-      </a>
-    `;
-    document.querySelector("a")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      onItemClick();
-    });
-
-    const resultPromise = sendItems({ query: "お茶", count: 25, delayMs: 1 });
-    await vi.runAllTimersAsync();
-
-    await expect(resultPromise).resolves.toMatchObject({
-      host: "twitcasting.tv",
-      query: "お茶",
-      requested: 20,
-      sent: 20
-    });
-    expect(onItemClick).toHaveBeenCalledTimes(20);
-    expect(onSendClick).toHaveBeenCalledTimes(20);
-
-    vi.useRealTimers();
-  });
-
-  it("clicks a selected candidate by index", async () => {
-    vi.useFakeTimers();
-    const onTeaClick = vi.fn();
-    const onCoinClick = vi.fn(() => {
-      document.body.insertAdjacentHTML(
-        "beforeend",
-        `
-          <div id="tw-item-window-data">
-            <div class="tw-item-send-post" data-sendable="true">
-              <form id="gift_form"><button id="messagelink" type="submit">ポイントを使って送る</button></form>
-            </div>
-          </div>
-        `
-      );
-      document.querySelector("#messagelink")?.addEventListener("click", onSendClick);
-    });
-    const onSendClick = vi.fn((event: Event) => event.preventDefault());
-    document.body.innerHTML = `
-      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
-        <span class="tw-item-list-item-name">お茶</span>
-        <span class="tw-item-list-item-amount">10</span>
-      </a>
-      <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
-        <span class="tw-item-list-item-name">コンティニューコイン</span>
-        <span class="tw-item-list-item-amount">50</span>
-      </a>
-    `;
-    const [teaButton, coinButton] = Array.from(document.querySelectorAll("a"));
-    teaButton.addEventListener("click", onTeaClick);
-    coinButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      onCoinClick();
-    });
-
-    const resultPromise = sendItems({
-      candidateIndex: 1,
-      label: "コンティニューコイン 50",
-      count: 2,
-      delayMs: 300
-    });
-    await vi.runAllTimersAsync();
-
-    await expect(resultPromise).resolves.toMatchObject({
-      query: "コンティニューコイン 50",
-      requested: 2,
-      sent: 2
-    });
-    expect(onTeaClick).not.toHaveBeenCalled();
-    expect(onCoinClick).toHaveBeenCalledTimes(2);
-    expect(onSendClick).toHaveBeenCalledTimes(2);
-
-    vi.useRealTimers();
-  });
-
-  it("clicks a selected TwitCasting item anchor", async () => {
-    vi.useFakeTimers();
-    const onCoinClick = vi.fn((event: Event) => {
-      event.preventDefault();
-      document.body.insertAdjacentHTML(
-        "beforeend",
-        `
-          <div id="tw-item-window-data">
-            <div class="tw-item-send-post" data-sendable="true">
-              <form id="gift_form"><button id="messagelink" type="submit">ポイントを使って送る</button></form>
-            </div>
-          </div>
-        `
-      );
-      document.querySelector("#messagelink")?.addEventListener("click", onSendClick);
-    });
-    const onSendClick = vi.fn((event: Event) => event.preventDefault());
-    document.body.innerHTML = `
-      <div class="tw-item-list">
-        <a href="javascript:giftItem('c:studying777', 'coin', true);" class="tw-item-list-item">
-          <span class="tw-item-list-item-name">コンティニューコイン</span>
-          <span class="tw-item-list-item-amount">50</span>
-        </a>
-      </div>
-    `;
-    document.querySelector("a")?.addEventListener("click", onCoinClick);
-
-    const resultPromise = sendItems({
-      candidateIndex: 0,
-      label: "コンティニューコイン 50",
-      count: 1,
-      delayMs: 300
-    });
-    await vi.runAllTimersAsync();
-
-    await expect(resultPromise).resolves.toMatchObject({
-      query: "コンティニューコイン 50",
-      requested: 1,
-      sent: 1
-    });
-    expect(onCoinClick).toHaveBeenCalled();
-    expect(onSendClick).toHaveBeenCalled();
-
-    vi.useRealTimers();
-  });
-
-  it("stops when the point send button is not shown", async () => {
-    vi.useFakeTimers();
-    document.body.innerHTML = `
-      <a href="javascript:giftItem('c:studying777', 'tea', true);" class="tw-item-list-item">
-        <span class="tw-item-list-item-name">お茶</span>
-        <span class="tw-item-list-item-amount">10</span>
-      </a>
-    `;
-    document.querySelector("a")?.addEventListener("click", (event) => event.preventDefault());
-
-    const resultPromise = sendItems({ query: "お茶", count: 1, delayMs: 300 });
-    await vi.runAllTimersAsync();
-
-    await expect(resultPromise).resolves.toMatchObject({
-      requested: 1,
-      sent: 0,
-      stoppedReason: "ポイント送信ボタンが見つかりませんでした"
-    });
-
-    vi.useRealTimers();
-  });
-
-  it("stops when no candidate is found", async () => {
-    await expect(sendItems({ query: "お茶", count: 3, delayMs: 300 })).resolves.toMatchObject({
-      requested: 3,
-      sent: 0,
-      stoppedReason: "候補が見つかりませんでした"
+      itemId: "coin"
     });
   });
 });

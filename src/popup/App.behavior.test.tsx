@@ -59,8 +59,7 @@ const setupPopup = (options?: {
   });
   const listResult = options?.listResult ?? {
     host: "twitcasting.tv",
-    candidates: [],
-    availablePoints: undefined
+    candidates: []
   };
   chromeMock.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
     if (options?.listImplementation) {
@@ -118,7 +117,7 @@ describe("popup 表示の characterization", () => {
 
   it("2. 候補0件のとき「候補がありません」と再試行が出る", async () => {
     setupPopup({
-      listResult: { host: "twitcasting.tv", candidates: [], availablePoints: undefined }
+      listResult: { host: "twitcasting.tv", candidates: [] }
     });
     render(<App />);
 
@@ -135,7 +134,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A, CANDIDATE_B],
-        availablePoints: 500
+        pointStatus: { availablePoints: 500 }
       }
     });
     render(<App />);
@@ -159,7 +158,6 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 32,
         pointStatus: { availablePoints: 32, ownedPoints: 2, paidPoints: 0 }
       }
     });
@@ -181,8 +179,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [{ index: 0, label: "ポイントなしアイテム" }],
-        availablePoints: 32,
-        pointStatus: undefined
+        pointStatus: { availablePoints: 32 }
       }
     });
     render(<App />);
@@ -201,8 +198,10 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 100,
-        pointRecovery: { remainingText: "あと10分", recoveredPoints: 100 }
+        pointStatus: {
+          availablePoints: 100,
+          pointRecovery: { remainingText: "あと10分", recoveredPoints: 100 }
+        }
       }
     });
     render(<App />);
@@ -213,7 +212,11 @@ describe("popup 表示の characterization", () => {
 
   it("5b. 回復予定がない場合は回復文言が表示されない", async () => {
     setupPopup({
-      listResult: { host: "twitcasting.tv", candidates: [CANDIDATE_A], availablePoints: 100 }
+      listResult: {
+        host: "twitcasting.tv",
+        candidates: [CANDIDATE_A],
+        pointStatus: { availablePoints: 100 }
+      }
     });
     render(<App />);
 
@@ -222,29 +225,10 @@ describe("popup 表示の characterization", () => {
     expect(screen.queryByLabelText("ポイント回復予定")).toBeNull();
   });
 
-  it("5c. pointStatus側の回復予定があればそちらが優先表示される", async () => {
-    setupPopup({
-      listResult: {
-        host: "twitcasting.tv",
-        candidates: [CANDIDATE_A],
-        availablePoints: 100,
-        pointRecovery: { remainingText: "あと10分", recoveredPoints: 100 },
-        pointStatus: {
-          availablePoints: 100,
-          pointRecovery: { remainingText: "あと5分", recoveredPoints: 50 }
-        }
-      }
-    });
-    render(<App />);
-
-    const recovery = await screen.findByLabelText("ポイント回復予定");
-    expect(recovery).toHaveTextContent("あと5分 50 ptに回復");
-  });
-
   it("6. 通知トグルの初期状態が設定値を反映し切り替えると保存される", async () => {
     setupPopup({
       settings: { checkboxRules: {}, pointRecoveryNotificationEnabled: false },
-      listResult: { host: "twitcasting.tv", candidates: [], availablePoints: undefined }
+      listResult: { host: "twitcasting.tv", candidates: [] }
     });
     render(<App />);
 
@@ -271,7 +255,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 340
+        pointStatus: { availablePoints: 340 }
       }
     });
     render(<App />);
@@ -292,7 +276,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 340
+        pointStatus: { availablePoints: 340 }
       }
     });
     // 送信要求の count を結果にそのまま反映させる(要求値の透過確認用)
@@ -323,7 +307,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 10
+        pointStatus: { availablePoints: 10 }
       }
     });
     render(<App />);
@@ -337,7 +321,7 @@ describe("popup 表示の characterization", () => {
       listResult: {
         host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
-        availablePoints: 340
+        pointStatus: { availablePoints: 340 }
       }
     });
     render(<App />);
@@ -372,7 +356,7 @@ describe("popup 表示の characterization", () => {
         return {
           host: "twitcasting.tv",
           candidates: [CANDIDATE_A],
-          availablePoints: listCalls >= 2 ? 290 : 340
+          pointStatus: { availablePoints: listCalls >= 2 ? 290 : 340 }
         };
       },
       executeScriptResult: { host: "twitcasting.tv", query: "お茶", requested: 1, sent: 1 }

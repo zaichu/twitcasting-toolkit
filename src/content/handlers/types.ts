@@ -2,16 +2,14 @@ import type {
   CheckboxActionResult,
   CheckboxState,
   ExtensionMessage,
-  ItemCandidateListResult,
-  ItemSendResult
+  ItemCandidateListResult
 } from "../../extensionTypes";
 
 // content script が popup に返す可能性のある応答の合併型。
 export type ContentResponse =
   | CheckboxState
   | CheckboxActionResult
-  | ItemCandidateListResult
-  | ItemSendResult;
+  | ItemCandidateListResult;
 
 export type ContentSendResponse = (response: ContentResponse) => void;
 

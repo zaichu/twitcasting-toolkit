@@ -43,7 +43,6 @@ describe("popup item sender helpers", () => {
           ownedPoints: 2,
           paidPoints: 0
         },
-        32,
         50
       )
     ).toEqual([
@@ -54,13 +53,13 @@ describe("popup item sender helpers", () => {
   });
 
   it("falls back to available points when owned points are unknown", () => {
-    expect(getPointSummaryItems(undefined, 32, undefined)).toEqual([
-      { label: "利用可能", value: "32 pt" },
+    expect(getPointSummaryItems(undefined, undefined)).toEqual([
+      { label: "利用可能", value: "不明" },
       { label: "有料", value: "不明" },
       { label: "消費", value: "-" }
     ]);
 
-    expect(getPointSummaryItems({ availablePoints: 32 }, undefined, undefined)).toEqual([
+    expect(getPointSummaryItems({ availablePoints: 32 }, undefined)).toEqual([
       { label: "利用可能", value: "32 pt" },
       { label: "有料", value: "不明" },
       { label: "消費", value: "-" }
