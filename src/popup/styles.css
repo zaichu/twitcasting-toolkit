@@ -90,7 +90,6 @@ select {
   white-space: nowrap;
 }
 
-.icon-button,
 .actions button,
 .tabs button,
 .segmented button {
@@ -100,11 +99,6 @@ select {
   background: #fbfdfb;
   color: #172026;
   cursor: pointer;
-}
-
-.icon-button {
-  min-width: 54px;
-  padding: 0 10px;
 }
 
 button:disabled,
@@ -185,10 +179,6 @@ input:disabled {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-}
-
-.actions.two {
-  grid-template-columns: repeat(2, 1fr);
 }
 
 .actions.one {
@@ -457,25 +447,3 @@ input:disabled {
   cursor: pointer;
 }
 
-.candidate-list {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid #d7e0dc;
-  border-radius: 7px;
-  background: #ffffff;
-  font-size: 13px;
-}
-
-.candidate-list p,
-.candidate-list ul {
-  margin: 0;
-}
-
-.candidate-list ul {
-  display: grid;
-  gap: 4px;
-  max-height: 120px;
-  padding-left: 18px;
-  overflow: auto;
-}
