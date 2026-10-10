@@ -8,11 +8,7 @@ import type {
 import { savePointRecoveryNotificationEnabled } from "../../storage";
 import { sendToTab } from "../popupChrome";
 import { runItemSendInMainWorld } from "../mainWorldItemSend";
-import {
-  clampItemSendCount,
-  clampItemSendDelay,
-  MIN_ITEM_SEND_DELAY_MS
-} from "../../features/dom/domUtils";
+import { clampItemSendCount } from "../../features/dom/domUtils";
 import {
   getMaxItemCountFromPoints,
   getPointSummaryItems,
@@ -32,10 +28,6 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
   const [itemCount, setItemCount] = useState(1);
   const [itemResult, setItemResult] = useState<ItemSendResult>();
   const [pointRecoveryNotificationEnabled, setPointRecoveryNotificationEnabled] = useState(true);
-
-  const syncNotificationSetting = (enabled: boolean) => {
-    setPointRecoveryNotificationEnabled(enabled);
-  };
 
   const clearItemState = () => {
     setItemCandidates([]);
@@ -101,20 +93,13 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     setItemResult(undefined);
 
     try {
-      const result = await runItemSendInMainWorld(
-        tab.id,
-        {
-          candidateIndex: selectedItem.index,
-          label: selectedItem.label,
-          userId: selectedItem.userId,
-          itemId: selectedItem.itemId,
-          // MAIN world の func 内では外部モジュールを参照できないため、
-          // popup スコープ (MAIN world ではない) で事前にクランプして渡す。
-          count: clampItemSendCount(itemCount),
-          delayMs: clampItemSendDelay(MIN_ITEM_SEND_DELAY_MS)
-        },
-        tab.host
-      );
+      const result = await runItemSendInMainWorld(tab.id, {
+        userId: selectedItem.userId,
+        itemId: selectedItem.itemId,
+        // MAIN world の func 内では外部モジュールを参照できないため、
+        // popup スコープ (MAIN world ではない) で事前にクランプして渡す。
+        count: clampItemSendCount(itemCount)
+      });
       setItemResult(result);
     } catch (error) {
       setError(`アイテム送信操作に失敗しました: ${String(error)}`);
@@ -149,7 +134,7 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     loadItemCandidates,
     sendItem,
     updatePointRecoveryNotificationEnabled,
-    syncNotificationSetting,
+    syncNotificationSetting: setPointRecoveryNotificationEnabled,
     clearItemState
   };
 };

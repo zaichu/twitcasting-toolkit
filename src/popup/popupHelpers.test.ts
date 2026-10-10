@@ -75,11 +75,8 @@ describe("formatCheckboxStatus", () => {
   it("取得状態では選択中件数を返す", () => {
     expect(
       formatCheckboxStatus({
-        url: "https://twitcasting.tv/foo",
-        host: "twitcasting.tv",
         total: 3,
         checked: 1,
-        unchecked: 2,
         disabled: 0
       })
     ).toBe("1 / 3 件選択中");
@@ -88,11 +85,8 @@ describe("formatCheckboxStatus", () => {
   it("操作結果では変更件数を返す", () => {
     expect(
       formatCheckboxStatus({
-        url: "https://twitcasting.tv/foo",
-        host: "twitcasting.tv",
         total: 3,
         checked: 1,
-        unchecked: 2,
         disabled: 0,
         changed: 2
       })

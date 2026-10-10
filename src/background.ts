@@ -129,13 +129,6 @@ const checkPointRecovery = async (trigger: string): Promise<void> => {
   await evaluateAndPersistSnapshot(currentSnapshot, { alwaysNotifyIfNotPending: isStartupTrigger });
 };
 
-// popup 操作(アイテム候補取得)で content script が観測した最新のポイント状態。
-// background は 30 分間隔でしかポイント状態を確認しないため、これが無いと
-// popup を使うだけでは回復待ち検知(recheck アラーム)が始まらない。
-const handleObservedSnapshot = (snapshot: PointRecoverySnapshot): Promise<void> => {
-  return evaluateAndPersistSnapshot(snapshot);
-};
-
 // periodInMinutes だけで再作成すると起動のたびに次回発火が延期されてしまうため、
 // 既存のアラームが無いときだけ作成する。
 const ensureWatchAlarm = async (): Promise<void> => {
@@ -163,9 +156,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// popup 操作(アイテム候補取得)で content script が観測した最新のポイント状態。
+// background のポイント状態確認は定期実行が基本のため、これが無いと
+// popup を使うだけでは回復待ち検知(recheck アラーム)が始まらない。
 chrome.runtime.onMessage.addListener((message) => {
   if (isPointRecoveryObservedMessage(message)) {
-    void handleObservedSnapshot(message.snapshot);
+    void evaluateAndPersistSnapshot(message.snapshot);
   }
 });
 

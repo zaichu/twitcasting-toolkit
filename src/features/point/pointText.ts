@@ -1,3 +1,5 @@
+import type { PointRecovery } from "../../extensionTypes";
+
 export const AVAILABLE_POINTS_TEXT_PATTERN =
   /(?:利用可能ポイント|保有ポイント|所持ポイント)[^\d]{0,10}([\d,]+)/;
 
@@ -10,12 +12,7 @@ export const REMAINING_TIME_PATTERN =
 
 export const PAID_POINTS_TEXT_PATTERN = /有料ポイント\s*([\d,]+)\s*含む/;
 
-export type PointRecoveryText = {
-  remainingText: string;
-  recoveredPoints: number;
-};
-
-const normalizePointText = (text: string): string => {
+export const normalizeText = (text: string): string => {
   return text.replace(/\s+/g, " ").trim();
 };
 
@@ -26,7 +23,7 @@ const toNumber = (value: string): number | undefined => {
 };
 
 export const parseAvailablePointsFromText = (text: string): number | undefined => {
-  const normalized = normalizePointText(text);
+  const normalized = normalizeText(text);
   const match =
     normalized.match(AVAILABLE_POINTS_TEXT_PATTERN) ??
     normalized.match(POINT_PURCHASE_HEADING_PATTERN);
@@ -38,8 +35,8 @@ export const parseAvailablePointsFromText = (text: string): number | undefined =
   return toNumber(match[1]);
 };
 
-export const parsePointRecoveryFromText = (text: string): PointRecoveryText | undefined => {
-  const match = normalizePointText(text).match(POINT_RECOVERY_TEXT_PATTERN);
+export const parsePointRecoveryFromText = (text: string): PointRecovery | undefined => {
+  const match = normalizeText(text).match(POINT_RECOVERY_TEXT_PATTERN);
 
   if (!match) {
     return undefined;
@@ -64,7 +61,7 @@ export const extractPointRecoveryRemainingText = (text: string): string | undefi
 export const parseRemainingMillisecondsFromText = (
   remainingText: string
 ): number | undefined => {
-  const match = normalizePointText(remainingText).match(REMAINING_TIME_PATTERN);
+  const match = normalizeText(remainingText).match(REMAINING_TIME_PATTERN);
 
   if (!match) {
     return undefined;
@@ -86,7 +83,7 @@ export const parseRemainingMillisecondsFromText = (
 };
 
 export const parsePaidPointsFromText = (text: string): number | undefined => {
-  const match = normalizePointText(text).match(PAID_POINTS_TEXT_PATTERN);
+  const match = normalizeText(text).match(PAID_POINTS_TEXT_PATTERN);
 
   if (!match) {
     return undefined;

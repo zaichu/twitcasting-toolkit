@@ -10,8 +10,8 @@
 
 - 権限は必要最小限にする
 - `host_permissions` を広げる場合は README に理由を書く
-- `scripting` は TwitCasting タブで content script を復旧注入する用途に限定する
-- content script は TwitCasting の HTTP/HTTPS ページに限定する
+- `scripting` は TwitCasting タブでのアイテム送信の MAIN world 注入と、content script の復旧注入に限定する
+- content script は TwitCasting の HTTPS ページに限定する
 - `eval` や remote code execution に該当する実装は禁止
 - TwitCasting 外のページに content script を注入しない
 
