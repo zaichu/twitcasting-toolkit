@@ -1,26 +1,17 @@
 import type {
   ItemCandidate,
   ItemCandidateListResult,
-  ItemSendRequest,
-  ItemSendResult,
   PointRecovery,
   PointStatus
 } from "../../extensionTypes";
-import { clampItemSendCount, clampItemSendDelay, isDisabledElement } from "../dom/domUtils";
+import { isDisabledElement } from "../dom/domUtils";
 import {
   parseAvailablePointsFromText,
   parsePaidPointsFromText,
   parsePointRecoveryFromText
 } from "../point/pointText";
 
-const GIFT_ITEM_CALL_TIMEOUT_MS = 700;
 const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
-const SEND_BUTTON_TIMEOUT_MS = 5000;
-const SEND_BUTTON_POLL_MS = 100;
-
-const wait = (ms: number): Promise<void> => {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-};
 
 export const normalizeText = (text: string): string => {
   return text.replace(/\s+/g, " ").trim();
@@ -35,7 +26,6 @@ const twitCastingItemSelector = [
 type GiftItemCall = {
   userId: string;
   itemId: string;
-  usePoint: boolean;
 };
 
 type EmbeddedItemBoxItem = {
@@ -49,10 +39,6 @@ type EmbeddedItemBoxData = {
   items?: EmbeddedItemBoxItem[];
   point?: unknown;
   available_point?: unknown;
-};
-
-type ItemCandidateWithSource = ItemCandidate & {
-  element?: HTMLElement;
 };
 
 const getTwitCastingItemElements = (root: ParentNode = document): HTMLElement[] => {
@@ -183,19 +169,17 @@ export const parseGiftItemCall = (element: HTMLElement): GiftItemCall | undefine
 
   return {
     userId: match[2],
-    itemId: match[4],
-    usePoint: match[5] === "true"
+    itemId: match[4]
   };
 };
 
-const getDomItemCandidates = (root: ParentNode = document): ItemCandidateWithSource[] => {
+const getDomItemCandidates = (root: ParentNode = document): ItemCandidate[] => {
   return getTwitCastingItemElements(root)
     .map((element, index) => {
       const giftItemCall = parseGiftItemCall(element);
 
       return {
         index,
-        element,
         label: getElementLabel(element),
         userId: giftItemCall?.userId,
         itemId: giftItemCall?.itemId,
@@ -236,9 +220,8 @@ const getTargetUserId = (): string | undefined => {
 };
 
 type AjaxItemListResult = {
-  candidates: ItemCandidateWithSource[];
+  candidates: ItemCandidate[];
   availablePoints?: number;
-  pointRecovery?: PointRecovery;
   pointStatus?: PointStatus;
 };
 
@@ -345,7 +328,7 @@ const mergePointStatus = (...statuses: Array<PointStatus | undefined>): PointSta
     merged.pointRecovery ??= status.pointRecovery;
   }
 
-  return Object.keys(merged).length > 0 ? merged : undefined;
+  return Object.values(merged).some((value) => value !== undefined) ? merged : undefined;
 };
 
 const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
@@ -376,11 +359,10 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
     const availablePoints =
       getAvailablePointsFromDocument(parsedDocument) ??
       getAvailablePointsFromEmbeddedScripts(parsedDocument);
-    const pointRecovery = getPointRecoveryFromDocument(parsedDocument);
     const pointStatus = getPointStatusFromDocument(parsedDocument);
 
     if (!html.includes("tw-item-list-item")) {
-      return { candidates: [], availablePoints, pointRecovery, pointStatus };
+      return { candidates: [], availablePoints, pointStatus };
     }
 
     return {
@@ -389,7 +371,6 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
         index
       })),
       availablePoints,
-      pointRecovery,
       pointStatus
     };
   } catch {
@@ -486,7 +467,7 @@ const readBalancedObjectAt = (source: string, startIndex: number): string | unde
 const parseEmbeddedItemBoxCandidatesFromScript = (
   scriptText: string,
   initIndex: number
-): ItemCandidateWithSource[] => {
+): ItemCandidate[] => {
   const openParenIndex = scriptText.indexOf("(", initIndex);
   const firstQuoteOffset = scriptText.slice(openParenIndex + 1).search(/["']/);
   const userId =
@@ -511,7 +492,7 @@ const parseEmbeddedItemBoxCandidatesFromScript = (
     const items = Array.isArray(data.items) ? data.items : [];
 
     return items
-      .map((item, index): ItemCandidateWithSource | undefined => {
+      .map((item, index): ItemCandidate | undefined => {
         const itemId = typeof item.item_id === "string" ? item.item_id : undefined;
         const name = typeof item.name === "string" ? normalizeText(item.name) : "";
         const point = typeof item.point === "number" ? item.point : undefined;
@@ -530,14 +511,14 @@ const parseEmbeddedItemBoxCandidatesFromScript = (
           imageUrl
         };
       })
-      .filter((candidate): candidate is ItemCandidateWithSource => Boolean(candidate));
+      .filter((candidate): candidate is ItemCandidate => Boolean(candidate));
   } catch {
     return [];
   }
 };
 
-const getEmbeddedItemBoxCandidates = (): ItemCandidateWithSource[] => {
-  const candidates: ItemCandidateWithSource[] = [];
+const getEmbeddedItemBoxCandidates = (): ItemCandidate[] => {
+  const candidates: ItemCandidate[] = [];
 
   for (const script of Array.from(document.scripts)) {
     const scriptText = script.textContent ?? "";
@@ -558,7 +539,7 @@ const getEmbeddedItemBoxCandidates = (): ItemCandidateWithSource[] => {
   return candidates.map((candidate, index) => ({ ...candidate, index }));
 };
 
-const getAllItemCandidates = (): ItemCandidateWithSource[] => {
+const getAllItemCandidates = (): ItemCandidate[] => {
   const domCandidates = getDomItemCandidates();
 
   return domCandidates.length > 0 ? domCandidates : getEmbeddedItemBoxCandidates();
@@ -571,16 +552,7 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
   ]);
   const candidates = (
     ajaxResult.candidates.length > 0 ? ajaxResult.candidates : getAllItemCandidates()
-  )
-    .slice(0, 80)
-    .map(({ index, label, userId, itemId, point, imageUrl }) => ({
-      index,
-      label,
-      userId,
-      itemId,
-      point,
-      imageUrl
-    }));
+  ).slice(0, 80);
   const fallbackPointsRoot: ParentNode =
     document.querySelector<HTMLElement>("#tw-item-window-data") ?? document;
   const documentPointStatus = getPointStatusFromDocument(fallbackPointsRoot);
@@ -588,12 +560,8 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
     ajaxResult.availablePoints ??
     documentPointStatus?.availablePoints ??
     getAvailablePointsFromEmbeddedScripts();
-  const pointRecovery =
-    accountPointStatus?.pointRecovery ??
-    ajaxResult.pointRecovery ??
-    documentPointStatus?.pointRecovery;
   const pointStatus = mergePointStatus(
-    { availablePoints, pointRecovery },
+    { availablePoints },
     accountPointStatus,
     ajaxResult.pointStatus,
     documentPointStatus
@@ -602,236 +570,6 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
   return {
     host: window.location.host,
     candidates,
-    availablePoints,
-    pointRecovery,
     pointStatus
-  };
-};
-
-const pressElement = (element: HTMLElement) => {
-  element.scrollIntoView?.({ block: "center", inline: "center" });
-  element.focus({ preventScroll: true });
-
-  const pointerOptions = {
-    bubbles: true,
-    cancelable: true,
-    pointerId: 1,
-    pointerType: "mouse"
-  };
-  const mouseOptions = {
-    bubbles: true,
-    cancelable: true,
-    button: 0,
-    buttons: 1
-  };
-
-  const PointerEventConstructor = globalThis.PointerEvent ?? MouseEvent;
-
-  element.dispatchEvent(new PointerEventConstructor("pointerdown", pointerOptions));
-  element.dispatchEvent(new MouseEvent("mousedown", mouseOptions));
-  element.dispatchEvent(new PointerEventConstructor("pointerup", pointerOptions));
-  element.dispatchEvent(new MouseEvent("mouseup", mouseOptions));
-  element.click();
-};
-
-const callGiftItemInPage = (giftItemCall: GiftItemCall): Promise<boolean> => {
-  const eventName = `twitcasting-toolkit:gift-item:${Date.now()}:${Math.random()}`;
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const timeoutId = window.setTimeout(() => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      document.removeEventListener(eventName, handleResult);
-      resolve(false);
-    }, GIFT_ITEM_CALL_TIMEOUT_MS);
-
-    const handleResult = (event: Event) => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      window.clearTimeout(timeoutId);
-      document.removeEventListener(eventName, handleResult);
-      const detail = (event as CustomEvent<{ ok: boolean }>).detail;
-      resolve(Boolean(detail?.ok));
-    };
-
-    document.addEventListener(eventName, handleResult, { once: true });
-
-    const script = document.createElement("script");
-    script.textContent = `
-      (() => {
-        const eventName = ${JSON.stringify(eventName)};
-        const args = ${JSON.stringify(giftItemCall)};
-        try {
-          if (typeof giftItem !== "function") {
-            throw new Error("giftItem is not available");
-          }
-          giftItem(args.userId, args.itemId, args.usePoint);
-          document.dispatchEvent(new CustomEvent(eventName, { detail: { ok: true } }));
-        } catch (error) {
-          document.dispatchEvent(new CustomEvent(eventName, {
-            detail: { ok: false, message: String(error) }
-          }));
-        }
-      })();
-    `;
-    document.documentElement.append(script);
-    script.remove();
-  });
-};
-
-const openGiftItemWindow = async (candidate: ItemCandidateWithSource): Promise<boolean> => {
-  const giftItemCall =
-    candidate.userId && candidate.itemId
-      ? { userId: candidate.userId, itemId: candidate.itemId, usePoint: true }
-      : candidate.element
-        ? parseGiftItemCall(candidate.element)
-        : undefined;
-
-  if (giftItemCall && (await callGiftItemInPage(giftItemCall))) {
-    return true;
-  }
-
-  if (candidate.element) {
-    pressElement(candidate.element);
-    return true;
-  }
-
-  return false;
-};
-
-const getPointSendButton = (): HTMLElement | undefined => {
-  const selectors = [
-    '#tw-item-window-data .tw-item-send-post[data-sendable="true"] #messagelink',
-    "#tw-item-window-data #gift_form #messagelink",
-    "#gift_form #messagelink"
-  ];
-
-  return selectors
-    .map((selector) => document.querySelector<HTMLElement>(selector))
-    .find((element): element is HTMLElement => Boolean(element && !isDisabledElement(element)));
-};
-
-const waitForPointSendButton = async (): Promise<HTMLElement | undefined> => {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt <= SEND_BUTTON_TIMEOUT_MS) {
-    const button = getPointSendButton();
-
-    if (button) {
-      return button;
-    }
-
-    await wait(SEND_BUTTON_POLL_MS);
-  }
-
-  return undefined;
-};
-
-export const findItemCandidates = (
-  query: string
-): ItemCandidateWithSource[] => {
-  const normalizedQuery = normalizeText(query).toLowerCase();
-
-  if (!normalizedQuery) {
-    return [];
-  }
-
-  return getAllItemCandidates().filter((candidate) =>
-    candidate.label.toLowerCase().includes(normalizedQuery)
-  );
-};
-
-export const sendItems = async (request: ItemSendRequest): Promise<ItemSendResult> => {
-  const count = clampItemSendCount(request.count);
-  const delayMs = clampItemSendDelay(request.delayMs);
-  const query = request.label ?? request.query ?? "";
-  const candidates = getAllItemCandidates();
-  const candidateByItemId =
-    request.userId && request.itemId
-      ? candidates.find(
-          (item) => item.userId === request.userId && item.itemId === request.itemId
-        ) ?? {
-          index: -1,
-          label: request.label ?? request.itemId,
-          userId: request.userId,
-          itemId: request.itemId
-        }
-      : undefined;
-  const candidateByIndex =
-    typeof request.candidateIndex === "number"
-      ? candidates.find((item) => item.index === request.candidateIndex)
-      : undefined;
-  const candidate =
-    candidateByItemId ??
-    (candidateByIndex && (!request.label || candidateByIndex.label === request.label)
-      ? candidateByIndex
-      : candidates.find((item) => item.label === request.label) ?? findItemCandidates(query)[0]);
-  let sent = 0;
-
-  if (!candidate) {
-    return {
-      host: window.location.host,
-      query,
-      requested: count,
-      sent,
-      stoppedReason: "候補が見つかりませんでした"
-    };
-  }
-
-  for (let index = 0; index < count; index += 1) {
-    if (candidate.element && (!candidate.element.isConnected || isDisabledElement(candidate.element))) {
-      return {
-        host: window.location.host,
-        query,
-        requested: count,
-        sent,
-        stoppedReason: "候補が操作できない状態になりました"
-      };
-    }
-
-    const opened = await openGiftItemWindow(candidate);
-
-    if (!opened) {
-      return {
-        host: window.location.host,
-        query,
-        requested: count,
-        sent,
-        stoppedReason: "アイテム送信画面を開けませんでした"
-      };
-    }
-
-    const sendButton = await waitForPointSendButton();
-
-    if (!sendButton) {
-      return {
-        host: window.location.host,
-        query,
-        requested: count,
-        sent,
-        stoppedReason: "ポイント送信ボタンが見つかりませんでした"
-      };
-    }
-
-    pressElement(sendButton);
-    sent += 1;
-
-    if (index < count - 1) {
-      await wait(delayMs);
-    }
-  }
-
-  return {
-    host: window.location.host,
-    query,
-    requested: count,
-    sent
   };
 };

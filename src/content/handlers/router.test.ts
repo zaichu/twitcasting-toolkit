@@ -3,11 +3,10 @@ import type {
   CheckboxActionResult,
   CheckboxState,
   ExtensionMessage,
-  ItemCandidateListResult,
-  ItemSendResult
+  ItemCandidateListResult
 } from "../../extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "../../features/checkbox/checkboxTools";
-import { listItemCandidates, sendItems } from "../../features/itemSender/itemSender";
+import { listItemCandidates } from "../../features/itemSender/itemSender";
 import { handleMessage } from "./router";
 
 vi.mock("../../features/checkbox/checkboxTools", () => ({
@@ -17,8 +16,7 @@ vi.mock("../../features/checkbox/checkboxTools", () => ({
 
 vi.mock("../../features/itemSender/itemSender", () => ({
   getLoggedInUserId: vi.fn(),
-  listItemCandidates: vi.fn(),
-  sendItems: vi.fn()
+  listItemCandidates: vi.fn()
 }));
 
 const chromeMock = {
@@ -54,14 +52,7 @@ const checkboxActionResult: CheckboxActionResult = { ...checkboxState, changed: 
 const listResult: ItemCandidateListResult = {
   host: "twitcasting.tv",
   candidates: [],
-  availablePoints: 100
-};
-
-const sendResult: ItemSendResult = {
-  host: "twitcasting.tv",
-  query: "coin",
-  requested: 1,
-  sent: 1
+  pointStatus: { availablePoints: 100 }
 };
 
 describe("content router", () => {
@@ -73,7 +64,6 @@ describe("content router", () => {
     vi.mocked(getCheckboxState).mockReset().mockReturnValue(checkboxState);
     vi.mocked(runCheckboxAction).mockReset().mockReturnValue(checkboxActionResult);
     vi.mocked(listItemCandidates).mockReset().mockResolvedValue(listResult);
-    vi.mocked(sendItems).mockReset().mockResolvedValue(sendResult);
   });
 
   it("checkbox:get-state を同期で応答し false を返す", () => {
@@ -131,16 +121,6 @@ describe("content router", () => {
     );
   });
 
-  it("item-sender:send を非同期で応答し true を返す", async () => {
-    const sendResponse = vi.fn();
-    const request = { count: 1, delayMs: 300, label: "coin" };
-    const message: ExtensionMessage = { feature: "item-sender", type: "send", request };
-
-    expect(handleMessage(message, sender, sendResponse)).toBe(true);
-    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith(sendResult));
-    expect(sendItems).toHaveBeenCalledWith(request);
-  });
-
   it("未知の feature には応答せず false を返す", () => {
     const sendResponse = vi.fn();
     const message = { feature: "unknown", type: "unknown" } as unknown as ExtensionMessage;
@@ -165,7 +145,7 @@ describe("content router", () => {
     }
   });
 
-  it("未知の item-sender type は無視し false を返す(send に流さない)", () => {
+  it("未知の item-sender type は無視し false を返す", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const sendResponse = vi.fn();
@@ -173,7 +153,6 @@ describe("content router", () => {
 
       expect(handleMessage(message, sender, sendResponse)).toBe(false);
       expect(sendResponse).not.toHaveBeenCalled();
-      expect(sendItems).not.toHaveBeenCalled();
       expect(listItemCandidates).not.toHaveBeenCalled();
       expect(warn).toHaveBeenCalledTimes(1);
     } finally {

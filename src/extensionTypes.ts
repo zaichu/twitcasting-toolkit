@@ -47,8 +47,6 @@ export type PointStatus = {
 export type ItemCandidateListResult = {
   host: string;
   candidates: ItemCandidate[];
-  availablePoints?: number;
-  pointRecovery?: PointRecovery;
   pointStatus?: PointStatus;
 };
 
@@ -87,11 +85,6 @@ export type ExtensionMessage =
   | {
       feature: "item-sender";
       type: "list";
-    }
-  | {
-      feature: "item-sender";
-      type: "send";
-      request: ItemSendRequest;
     };
 
 export const SETTINGS_KEY = "twitCastingToolkitSettings";
