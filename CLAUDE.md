@@ -17,20 +17,17 @@
 - 指示されていない改善・リファクタを混在させない
 - 情報不足時の質問は 1 つだけにする
 
-## Codex / Claude 分担
+## エージェント分担
 
-- 原則として Codex は設計、テスト観点整理、Claude への実装依頼、実装後レビューを担当する
-- 原則として Claude は Codex から渡された依頼文に基づく実装を担当する
-- Codex が直接実装してよい例外は、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
-- Codex から Claude に実装を渡す場合は `.claude/skills/codex-claude-handoff/SKILL.md` を使う
-- Codex はファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
-- Claude に実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
+- 役割(実装・設計・統合)の担当割り当ては `docs/agent-roles.md` を正本とする
+- 実装は実装エージェントに委譲する。委譲の手順・依頼テンプレートはユーザーレベルの `agent-delegation` skill を正本とする
+- 統合担当が直接実装してよいのは、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
+- ファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
+- 実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
 
 ## Agent Assets
 
-- repo 内の agent 設定の正本は `./.claude` とする
-- `./.codex` は Codex 用に `.claude` と同じ内容を持つ入口として維持する
-- この sandbox では symlink が編集を阻害するため、`shoken-webapp` と違い実ディレクトリで同期する
+- repo 内の agent 設定は `./.claude` に一元化する。複製や同期用の別ディレクトリは作らない(Codex は `./AGENTS.md` からここを参照する)
 - skills は `shoken-webapp` を参考に、Chrome 拡張機能開発に関係するものだけを置く
 - backend / DB / deploy / J-Quants など、この repo に関係しない skills は追加しない
 
@@ -69,4 +66,4 @@
 - `.claude/skills/security-review/SKILL.md`
 - `.claude/skills/systematic-debugging/SKILL.md`
 - `.claude/skills/test-driven-development/SKILL.md`
-- `.claude/skills/codex-claude-handoff/SKILL.md`
+- `.claude/skills/issue-task-lifecycle/SKILL.md`
