@@ -1,0 +1,8 @@
+import type { TestingLibraryMatchers } from "@testing-library/jest-dom/matchers";
+
+declare module "vitest" {
+  interface Assertion<R extends void | Promise<void>, T>
+    extends TestingLibraryMatchers<any, R> {}
+  interface AsymmetricMatchersContaining
+    extends TestingLibraryMatchers<any, any> {}
+}
