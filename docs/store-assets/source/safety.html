@@ -16,11 +16,12 @@
         <h1>TwitCasting のページだけで動作。</h1>
         <p class="lead">
           操作対象は TwitCasting のタブに限定。外部サーバーへの送信を追加せず、
-          popup から明示した操作だけを実行します。
+          popup からの明示操作のほか、チェックボックスの自動適用と
+          無料コイン回復の確認だけを実行します。
         </p>
         <div class="badge-row">
           <span class="badge">Host permission は TwitCasting のみ</span>
-          <span class="badge">設定は chrome.storage.sync</span>
+          <span class="badge">設定・状態は chrome.storage</span>
           <span class="badge">ポイント不足時は停止</span>
         </div>
       </section>
@@ -77,7 +78,7 @@
           <div class="summary">
             <div><span>権限</span><strong>最小限</strong></div>
             <div><span>対象</span><strong>TC</strong></div>
-            <div><span>保存</span><strong>設定のみ</strong></div>
+            <div><span>保存</span><strong>設定・状態</strong></div>
           </div>
           <span class="primary-button">TwitCasting タブで実行</span>
           <p class="status">外部の独自サーバーへデータを送信しません</p>
