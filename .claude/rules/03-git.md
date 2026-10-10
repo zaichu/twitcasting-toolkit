@@ -22,7 +22,7 @@
 
 ## worktree 運用
 
-- 大きめの実装や Claude に実装を委譲するタスクでは、専用 `git worktree` を作る
+- 大きめの実装や実装エージェントに委譲するタスクでは、専用 `git worktree` を作る
 - repo ルートの `main` はレビュー/統合用に clean に保つ
 - worktree の配置先は `/tmp/<repo>-<topic>` のような一時パスを標準とする
 - 1 作業ブランチ = 1 worktree を守る
@@ -72,7 +72,7 @@ gh pr create --base main --head feature/<topic>
 
 ## 禁止事項
 
-- `main` への直接コミット / 直接 push(人間・Codex・Claude いずれも)
+- `main` への直接コミット / 直接 push(人間・AIエージェントいずれも)
 - 1 つの作業ブランチに複数タスクを混在させること
 - 不要な `--force` push
 - squash merge 済み・remote 削除済み・worktree 削除済みの短期ブランチ cleanup 以外で `git branch -D` を使うこと
@@ -80,5 +80,5 @@ gh pr create --base main --head feature/<topic>
 ## 例外: 自動バージョンバンプ
 
 - `.github/workflows/auto-version-bump.yml` は PR が `main` にマージされた直後、`github-actions[bot]` として `main` へ直接 patch version の commit を push する
-- これは中間 PR を作らずバージョンを追従させるための唯一の自動化例外であり、人間・Codex・Claude による直接 push を許可するものではない
+- これは中間 PR を作らずバージョンを追従させるための唯一の自動化例外であり、人間・AIエージェントによる直接 push を許可するものではない
 - 複数 PR がほぼ同時にマージされても取りこぼさないよう `concurrency: group: version-bump-main` で直列化し、push 失敗時は最新の `main` を取り直してリトライする

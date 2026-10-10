@@ -58,10 +58,10 @@ gh api graphql -f query="mutation{addSubIssue(input:{issueId:\"$PARENT_ID\",subI
 
 task file はプロジェクトルールが指定する場所に作る。指定がなければ `docs/tasks/<branch-name>.md` を使う。
 
-- Claude に実装を委譲する。
+- 実装エージェントに実装を委譲する。
 - 専用 worktree で中規模以上の作業を進める。
 - 受け入れ条件、非対象、確認コマンドを固定したい。
-- レビュー指摘を Claude に再依頼する必要がある。
+- レビュー指摘を実装エージェントに再依頼する必要がある。
 
 task file には Issue/PR 番号がある場合は必ず書く。完了または中止時に削除し、コミットしない。
 
@@ -69,7 +69,7 @@ task file には Issue/PR 番号がある場合は必ず書く。完了または
 
 - 仕様、原因、判断、残件: Issue
 - 実装内容、検証結果、レビュー対応: PR
-- Claude 依頼文、受け入れ条件、作業中チェック: task file
+- 実装エージェントへの依頼文、受け入れ条件、作業中チェック: task file
 - 一時ログ、コメント下書き: `/tmp`。完了時に削除する。
 
 ## 終了時チェック
