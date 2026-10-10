@@ -1,5 +1,5 @@
 import { handleCheckboxApplyRule, handleCheckboxGetState, handleCheckboxRun } from "./checkbox";
-import { handleItemSenderList, handleItemSenderSend } from "./itemSender";
+import { handleItemSenderList } from "./itemSender";
 import type { ContentMessageHandler, ContentMessageKey } from "./types";
 
 // `${feature}:${type}` が登録済みキーかを判定する型ガード。
@@ -13,8 +13,7 @@ export const MESSAGE_HANDLERS: Record<ContentMessageKey, ContentMessageHandler> 
   "checkbox:get-state": handleCheckboxGetState,
   "checkbox:run": handleCheckboxRun,
   "checkbox:apply-rule": handleCheckboxApplyRule,
-  "item-sender:list": handleItemSenderList,
-  "item-sender:send": handleItemSenderSend
+  "item-sender:list": handleItemSenderList
 };
 
 // chrome.runtime.onMessage に登録するリスナー。ディスパッチのみを行い、

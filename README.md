@@ -25,14 +25,14 @@ TwitCasting の操作を補助するための Chrome 拡張機能です。単一
 ## 方針
 
 - 対象サイトは TwitCasting のみに限定する
-- 機能は popup から明示操作したときだけ実行する
+- popup からの明示操作のほか、自動で行うのはページ読み込み時のチェックボックス自動適用とログイン中ユーザー ID の保存、バックグラウンドの無料コイン回復確認だけに限定する
 - アイテム送信のような取り消しにくい操作には、回数上限と状態検出を入れる
 - TwitCasting の制限回避、課金回避、認可回避を目的にした機能は扱わない
 
 ## 権限
 
 - `activeTab`: popup から現在の TwitCasting タブへ操作を送るため
-- `scripting`: content script がまだ入っていない既存タブへ、popup から復旧注入するため
+- `scripting`: アイテム送信をページの MAIN world で実行する注入と、content script がまだ入っていない既存タブへの復旧注入のため
 - `storage`: ホスト別の設定、ログイン中ユーザー ID、直近のポイント状態を保存するため
 - `alarms`: 無料コイン回復確認をバックグラウンドで定期実行するため
 - `notifications`: 無料コインの回復完了をデスクトップ通知するため
@@ -85,8 +85,7 @@ npm run package:release
 
 ## Agent ルール
 
-- 正本は `.claude/`
-- `.codex/` は同内容の Codex 用入口として維持
+- agent 設定は `.claude/` に一元化(Codex は `AGENTS.md` から参照)
 - ブランチ運用は `.claude/rules/03-git.md` を参照
 - skills は `shoken-webapp` を参考に、フロントエンド拡張機能開発、テスト、PR、Git 操作、セキュリティレビューに関係するものだけを同梱
 

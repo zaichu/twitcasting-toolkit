@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   extractPointRecoveryRemainingText,
-  hasPendingPointRecoveryInText,
   parseAvailablePointsFromText,
   parsePaidPointsFromText,
   parsePointRecoveryFromText,
@@ -47,17 +46,15 @@ describe("parsePointRecoveryFromText", () => {
   });
 });
 
-describe("extractPointRecoveryRemainingText / hasPendingPointRecoveryInText", () => {
+describe("extractPointRecoveryRemainingText", () => {
   it("回復待ち表記から「あと〜で」部分を取り出す", () => {
     expect(extractPointRecoveryRemainingText("あと5時間20分で100 ptに回復")).toBe(
       "あと5時間20分で"
     );
-    expect(hasPendingPointRecoveryInText("あと5時間20分で100 ptに回復")).toBe(true);
   });
 
-  it("回復待ち表記が無ければ undefined / false", () => {
+  it("回復待ち表記が無ければ undefined", () => {
     expect(extractPointRecoveryRemainingText("利用可能ポイント 1,200 pt")).toBeUndefined();
-    expect(hasPendingPointRecoveryInText("利用可能ポイント 1,200 pt")).toBe(false);
   });
 });
 

@@ -3,7 +3,6 @@ import type {
   ItemCandidate,
   ItemCandidateListResult,
   ItemSendResult,
-  PointRecovery,
   PointStatus
 } from "../../extensionTypes";
 import { savePointRecoveryNotificationEnabled } from "../../storage";
@@ -29,8 +28,6 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
   const [itemSenderBusy, setItemSenderBusy] = useState(false);
   const [itemCandidates, setItemCandidates] = useState<ItemCandidate[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number>();
-  const [availablePoints, setAvailablePoints] = useState<number>();
-  const [pointRecovery, setPointRecovery] = useState<PointRecovery>();
   const [pointStatus, setPointStatus] = useState<PointStatus>();
   const [itemCount, setItemCount] = useState(1);
   const [itemResult, setItemResult] = useState<ItemSendResult>();
@@ -43,8 +40,6 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
   const clearItemState = () => {
     setItemCandidates([]);
     setSelectedItemIndex(undefined);
-    setAvailablePoints(undefined);
-    setPointRecovery(undefined);
     setPointStatus(undefined);
   };
 
@@ -71,8 +66,6 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
         type: "list"
       });
       setItemCandidates(result.candidates);
-      setAvailablePoints(result.availablePoints);
-      setPointRecovery(result.pointRecovery);
       setPointStatus(result.pointStatus);
       setSelectedItemIndex((currentIndex) => {
         if (result.candidates.some((candidate) => candidate.index === currentIndex)) {
@@ -84,8 +77,6 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     } catch (error) {
       setItemCandidates([]);
       setSelectedItemIndex(undefined);
-      setAvailablePoints(undefined);
-      setPointRecovery(undefined);
       setPointStatus(undefined);
       setError(`アイテム候補の取得に失敗しました: ${String(error)}`);
     } finally {
@@ -135,9 +126,9 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     await loadItemCandidates(tab, { resetResult: false });
   };
 
-  const maxItemCount = getMaxItemCountFromPoints(availablePoints, selectedItem?.point);
-  const pointSummaryItems = getPointSummaryItems(pointStatus, availablePoints, selectedItem?.point);
-  const displayPointRecovery = pointStatus?.pointRecovery ?? pointRecovery;
+  const maxItemCount = getMaxItemCountFromPoints(pointStatus?.availablePoints, selectedItem?.point);
+  const pointSummaryItems = getPointSummaryItems(pointStatus, selectedItem?.point);
+  const displayPointRecovery = pointStatus?.pointRecovery;
   const itemDisabled = !tab || itemSenderBusy || selectedItemIndex === undefined;
   const maxItemCountDisabled = !tab || itemSenderBusy || maxItemCount === undefined;
 

@@ -8,12 +8,11 @@
 
 ## Agent 分担
 
-- 原則として Codex は設計、テスト観点整理、Claude への実装依頼、実装後レビューを担当する
-- 原則として Claude は Codex から渡された依頼文に基づく実装を担当する
-- Codex が直接実装してよい例外は、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
-- Codex から Claude に実装を渡す場合は `.claude/skills/codex-claude-handoff/SKILL.md` を使う
-- Codex はファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
-- Claude に実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
+- 役割(実装・設計・統合)の担当割り当ては `docs/agent-roles.md` を正本とする
+- 実装は実装エージェントに委譲する。委譲の手順・依頼テンプレートはユーザーレベルの `agent-delegation` skill を正本とする
+- 統合担当が直接実装してよいのは、ユーザーが明示した場合、または運用ルール・ドキュメント・handoff 文面の小変更に限る
+- ファイル編集前に `git status --short --branch` で作業ブランチを確認し、`main` なら短期ブランチまたは worktree を作ってから進める
+- 実装委譲する作業は原則 `/tmp/twitcasting-toolkit-<topic>` の worktree 上で行う
 
 ## 構成方針
 

@@ -61,10 +61,6 @@ export const extractPointRecoveryRemainingText = (text: string): string | undefi
   return parsePointRecoveryFromText(text)?.remainingText;
 };
 
-export const hasPendingPointRecoveryInText = (text: string): boolean => {
-  return extractPointRecoveryRemainingText(text) !== undefined;
-};
-
 export const parseRemainingMillisecondsFromText = (
   remainingText: string
 ): number | undefined => {
