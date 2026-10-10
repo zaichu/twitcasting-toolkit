@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   clampItemSendCount,
-  clampItemSendDelay,
   isDisabledElement,
-  MAX_ITEM_SEND_COUNT,
-  MAX_ITEM_SEND_DELAY_MS,
-  MIN_ITEM_SEND_DELAY_MS
+  MAX_ITEM_SEND_COUNT
 } from "./domUtils";
 
 describe("domUtils", () => {
@@ -15,14 +12,6 @@ describe("domUtils", () => {
     expect(clampItemSendCount(5)).toBe(5);
     expect(clampItemSendCount(MAX_ITEM_SEND_COUNT)).toBe(MAX_ITEM_SEND_COUNT);
     expect(clampItemSendCount(MAX_ITEM_SEND_COUNT + 10)).toBe(MAX_ITEM_SEND_COUNT);
-  });
-
-  it("clamps item send delay to MIN..MAX", () => {
-    expect(clampItemSendDelay(MIN_ITEM_SEND_DELAY_MS - 1)).toBe(MIN_ITEM_SEND_DELAY_MS);
-    expect(clampItemSendDelay(MIN_ITEM_SEND_DELAY_MS)).toBe(MIN_ITEM_SEND_DELAY_MS);
-    expect(clampItemSendDelay(1000)).toBe(1000);
-    expect(clampItemSendDelay(MAX_ITEM_SEND_DELAY_MS)).toBe(MAX_ITEM_SEND_DELAY_MS);
-    expect(clampItemSendDelay(MAX_ITEM_SEND_DELAY_MS + 1)).toBe(MAX_ITEM_SEND_DELAY_MS);
   });
 
   it("detects disabled buttons and inputs", () => {

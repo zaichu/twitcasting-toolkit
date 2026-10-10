@@ -4,8 +4,8 @@ import { listItemCandidates } from "../../features/itemSender/itemSender";
 import type { ContentMessageHandler } from "./types";
 
 // popup 操作でポイント情報が取得できたタイミングで、その内容を background の
-// スナップショットにも反映させる。background は 30 分間隔でしかポイント状態を
-// 確認しないため、これが無いと popup を使うだけでは回復待ち検知が始まらない。
+// スナップショットにも反映させる。background のポイント状態確認は定期実行が
+// 基本のため、これが無いと popup を使うだけでは回復待ち検知が始まらない。
 const notifyBackgroundOfPointRecovery = (result: ItemCandidateListResult): void => {
   const pointRecovery = result.pointStatus?.pointRecovery;
 

@@ -39,18 +39,14 @@ vi.stubGlobal("chrome", chromeMock);
 const sender = {} as chrome.runtime.MessageSender;
 
 const checkboxState: CheckboxState = {
-  url: "https://twitcasting.tv/foo",
-  host: "twitcasting.tv",
   total: 2,
   checked: 1,
-  unchecked: 1,
   disabled: 0
 };
 
 const checkboxActionResult: CheckboxActionResult = { ...checkboxState, changed: 1 };
 
 const listResult: ItemCandidateListResult = {
-  host: "twitcasting.tv",
   candidates: [],
   pointStatus: { availablePoints: 100 }
 };

@@ -16,10 +16,8 @@ describe("checkboxTools", () => {
     `;
 
     expect(getCheckboxState()).toMatchObject({
-      host: "twitcasting.tv",
       total: 3,
       checked: 1,
-      unchecked: 2,
       disabled: 1
     });
   });
@@ -65,7 +63,6 @@ describe("checkboxTools", () => {
     expect(runCheckboxAction("invert")).toMatchObject({
       total: 3,
       checked: 1,
-      unchecked: 2,
       disabled: 1,
       changed: 2
     });
@@ -73,7 +70,6 @@ describe("checkboxTools", () => {
     expect(runCheckboxAction("check")).toMatchObject({
       total: 3,
       checked: 2,
-      unchecked: 1,
       disabled: 1,
       changed: 1
     });

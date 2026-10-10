@@ -15,11 +15,8 @@ export const getCheckboxState = (): CheckboxState => {
   const disabled = checkboxes.filter((checkbox) => checkbox.disabled).length;
 
   return {
-    url: window.location.href,
-    host: window.location.host,
     total: checkboxes.length,
     checked,
-    unchecked: checkboxes.length - checked,
     disabled
   };
 };

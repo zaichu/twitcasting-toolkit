@@ -14,11 +14,8 @@ type ChromeMock = {
 const TWITCASTING_TAB = { id: 123, url: "https://twitcasting.tv/caster123", active: true };
 
 const CHECKBOX_STATE = {
-  url: "https://twitcasting.tv/caster123",
-  host: "twitcasting.tv",
   total: 3,
   checked: 1,
-  unchecked: 2,
   disabled: 0
 };
 
@@ -58,7 +55,6 @@ const setupPopup = (options?: {
     action: { default_title: "TwitCasting Toolkit" }
   });
   const listResult = options?.listResult ?? {
-    host: "twitcasting.tv",
     candidates: []
   };
   chromeMock.tabs.sendMessage.mockImplementation(async (_tabId, message) => {
@@ -80,7 +76,7 @@ const setupPopup = (options?: {
   chromeMock.scripting.executeScript.mockResolvedValue(
     options?.executeScriptResult !== undefined
       ? [{ result: options.executeScriptResult }]
-      : [{ result: { host: "twitcasting.tv", query: "お茶", requested: 1, sent: 1 } }]
+      : [{ result: { requested: 1, sent: 1 } }]
   );
   vi.stubGlobal("chrome", chromeMock as unknown as typeof chrome);
 };
@@ -117,7 +113,7 @@ describe("popup 表示の characterization", () => {
 
   it("2. 候補0件のとき「候補がありません」と再試行が出る", async () => {
     setupPopup({
-      listResult: { host: "twitcasting.tv", candidates: [] }
+      listResult: { candidates: [] }
     });
     render(<App />);
 
@@ -132,7 +128,6 @@ describe("popup 表示の characterization", () => {
   it("3. 候補があるとき一覧表示され先頭が選択状態になる", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A, CANDIDATE_B],
         pointStatus: { availablePoints: 500 }
       }
@@ -156,7 +151,6 @@ describe("popup 表示の characterization", () => {
   it("4a. ポイントサマリーが所有/有料/消費の正しい文言で表示される", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 32, ownedPoints: 2, paidPoints: 0 }
       }
@@ -177,7 +171,6 @@ describe("popup 表示の characterization", () => {
   it("4b. 所有ポイント不明時は利用可能/不明/-にフォールバックする", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [{ index: 0, label: "ポイントなしアイテム" }],
         pointStatus: { availablePoints: 32 }
       }
@@ -196,7 +189,6 @@ describe("popup 表示の characterization", () => {
   it("5a. 回復予定がある場合のみ回復文言が表示される", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: {
           availablePoints: 100,
@@ -213,7 +205,6 @@ describe("popup 表示の characterization", () => {
   it("5b. 回復予定がない場合は回復文言が表示されない", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 100 }
       }
@@ -228,7 +219,7 @@ describe("popup 表示の characterization", () => {
   it("6. 通知トグルの初期状態が設定値を反映し切り替えると保存される", async () => {
     setupPopup({
       settings: { checkboxRules: {}, pointRecoveryNotificationEnabled: false },
-      listResult: { host: "twitcasting.tv", candidates: [] }
+      listResult: { candidates: [] }
     });
     render(<App />);
 
@@ -253,7 +244,6 @@ describe("popup 表示の characterization", () => {
   it("7a. 回数の初期値は1で「最大」ボタンで所持ポイントから算出された回数が入る", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 340 }
       }
@@ -274,7 +264,6 @@ describe("popup 表示の characterization", () => {
   it("7b. 「最大」で入った回数がそのまま送信回数に反映される", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 340 }
       }
@@ -285,8 +274,6 @@ describe("popup 表示の characterization", () => {
       return [
         {
           result: {
-            host: "twitcasting.tv",
-            query: "お茶",
             requested: request.count,
             sent: request.count
           }
@@ -305,7 +292,6 @@ describe("popup 表示の characterization", () => {
   it("7c. 購入不可のとき「最大」ボタンは無効", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 10 }
       }
@@ -319,7 +305,6 @@ describe("popup 表示の characterization", () => {
   it("7d. 回数欄へのキー入力でクランプされクラッシュしない", async () => {
     setupPopup({
       listResult: {
-        host: "twitcasting.tv",
         candidates: [CANDIDATE_A],
         pointStatus: { availablePoints: 340 }
       }
@@ -354,7 +339,6 @@ describe("popup 表示の characterization", () => {
         listCalls += 1;
         // 初回は340pt、送信後の再取得では290pt(消費反映)を返す
         return {
-          host: "twitcasting.tv",
           candidates: [CANDIDATE_A],
           pointStatus: { availablePoints: listCalls >= 2 ? 290 : 340 }
         };
