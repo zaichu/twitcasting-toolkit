@@ -1,7 +1,7 @@
 import type { CheckboxActionResult, CheckboxRule, ExtensionMessage } from "../../extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "../../features/checkbox/checkboxTools";
 import { getCheckboxRule } from "../../storage";
-import type { ContentMessageHandler } from "./types";
+import type { ContentMessageHandler, ContentSendResponse } from "./types";
 
 const getCurrentCheckboxRule = async (): Promise<CheckboxRule | undefined> => {
   return getCheckboxRule(window.location.host);
@@ -27,8 +27,12 @@ export const handleCheckboxGetState: ContentMessageHandler = (_message, _sender,
   return false;
 };
 
-export const handleCheckboxRun: ContentMessageHandler = (message, _sender, sendResponse) => {
-  sendResponse(runCheckboxAction((message as CheckboxRunMessage).action));
+export const handleCheckboxRun = (
+  message: CheckboxRunMessage,
+  _sender: chrome.runtime.MessageSender,
+  sendResponse: ContentSendResponse
+): boolean => {
+  sendResponse(runCheckboxAction(message.action));
   return false;
 };
 

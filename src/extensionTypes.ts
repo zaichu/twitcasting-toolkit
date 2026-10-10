@@ -87,6 +87,15 @@ export type ExtensionMessage =
       type: "list";
     };
 
+// メッセージ type ごとの応答型。ExtensionMessage に type を追加したらここにも
+// 1行足す(登録漏れは sendToTab の戻り値型でコンパイルエラーになる)。
+export type ExtensionMessageResponseMap = {
+  "get-state": CheckboxState;
+  "run": CheckboxActionResult;
+  "apply-rule": CheckboxActionResult;
+  "list": ItemCandidateListResult;
+};
+
 export const SETTINGS_KEY = "twitCastingToolkitSettings";
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

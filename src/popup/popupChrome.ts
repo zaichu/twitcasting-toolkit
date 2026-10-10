@@ -1,4 +1,4 @@
-import type { ExtensionMessage } from "../extensionTypes";
+import type { ExtensionMessage, ExtensionMessageResponseMap } from "../extensionTypes";
 import type { ActiveTab } from "./popupHelpers";
 
 const twitCastingUrlPattern = /^https:\/\/([^.]+\.)?twitcasting\.tv\//;
@@ -37,10 +37,10 @@ export const getActiveTab = async (): Promise<ActiveTab | undefined> => {
   };
 };
 
-export const sendToTab = async <TResponse,>(
+export const sendToTab = async <M extends ExtensionMessage>(
   tabId: number,
-  message: ExtensionMessage
-): Promise<TResponse> => {
+  message: M
+): Promise<ExtensionMessageResponseMap[M["type"]]> => {
   try {
     return await chrome.tabs.sendMessage(tabId, message);
   } catch (error) {
