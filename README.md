@@ -85,8 +85,7 @@ npm run package:release
 
 ## Agent ルール
 
-- 正本は `.claude/`
-- `.codex/` は同内容の Codex 用入口として維持
+- agent 設定は `.claude/` に一元化(Codex は `AGENTS.md` から参照)
 - ブランチ運用は `.claude/rules/03-git.md` を参照
 - skills は `shoken-webapp` を参考に、フロントエンド拡張機能開発、テスト、PR、Git 操作、セキュリティレビューに関係するものだけを同梱
 

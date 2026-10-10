@@ -1,6 +1,6 @@
-# Codex Review Request Template
+# Review Request Template
 
-以下をそのまま埋めて Codex に渡す。
+以下をそのまま埋めてレビュー担当エージェントに渡す。
 
 ```markdown
 以下の変更をコードレビューしてください。  
