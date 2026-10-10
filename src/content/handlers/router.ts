@@ -2,26 +2,39 @@ import { handleCheckboxApplyRule, handleCheckboxGetState, handleCheckboxRun } fr
 import { handleItemSenderList } from "./itemSender";
 import type { ContentMessageHandler } from "./types";
 
-// chrome.runtime.onMessage に登録するリスナー。message.type は全バリアントで
-// 一意なので判別共用体として直接分岐し、各 message type の処理はハンドラに委譲する。
-// 未知の type は何もせず false を返す。破壊的・取り消し不可な
+// chrome.runtime.onMessage に登録するリスナー。実行時の入力は型で保証されない
+// ため、feature:type の組み合わせが登録済みのものだけをハンドラに委譲する。
+// 未知の組み合わせは何もせず false を返す。破壊的・取り消し不可な
 // 操作(send/apply-rule)へのフォールバックは行わない(02-security.md 参照)。
+// 各 default では message が never に絞られるため、ExtensionMessage や
+// 分岐の追加漏れはコンパイルエラーになる。
 export const handleMessage: ContentMessageHandler = (message, sender, sendResponse) => {
-  switch (message.type) {
-    case "get-state":
-      return handleCheckboxGetState(message, sender, sendResponse);
-    case "run":
-      return handleCheckboxRun(message, sender, sendResponse);
-    case "apply-rule":
-      return handleCheckboxApplyRule(message, sender, sendResponse);
-    case "list":
-      return handleItemSenderList(message, sender, sendResponse);
+  switch (message.feature) {
+    case "checkbox":
+      switch (message.type) {
+        case "get-state":
+          return handleCheckboxGetState(message, sender, sendResponse);
+        case "run":
+          return handleCheckboxRun(message, sender, sendResponse);
+        case "apply-rule":
+          return handleCheckboxApplyRule(message, sender, sendResponse);
+        default:
+          message satisfies never;
+      }
+      break;
+    case "item-sender":
+      switch (message.type) {
+        case "list":
+          return handleItemSenderList(message, sender, sendResponse);
+        default:
+          message satisfies never;
+      }
+      break;
     default:
-      // ExtensionMessage の type と case が揃っていればここは never に絞られ、
-      // 分岐の追加漏れはコンパイルエラーになる。
       message satisfies never;
-      // メッセージ内容(ページ由来の値を含む可能性)を出さないよう固定文言のみ記録する。
-      console.warn("[twitcasting-toolkit] unknown content message, ignoring");
-      return false;
   }
+
+  // メッセージ内容(ページ由来の値を含む可能性)を出さないよう固定文言のみ記録する。
+  console.warn("[twitcasting-toolkit] unknown content message, ignoring");
+  return false;
 };
