@@ -2,20 +2,20 @@ import type { ItemSendRequest, ItemSendResult } from "../extensionTypes";
 
 export const runItemSendInMainWorld = async (
   tabId: number,
-  request: ItemSendRequest,
-  host: string
+  request: ItemSendRequest
 ): Promise<ItemSendResult> => {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId },
     world: "MAIN",
-    args: [request, host],
-    func: async (sendRequest: ItemSendRequest, pageHost: string): Promise<ItemSendResult> => {
+    args: [request],
+    func: async (sendRequest: ItemSendRequest): Promise<ItemSendResult> => {
       // NOTE: この func は MAIN world にシリアライズ注入されるため、外部モジュール
       // (domUtils.ts 等) を import 参照できない。以下の DOM 操作関数は意図的に
-      // func 内に残している。count / delayMs は呼び出し側 (sendItem) で事前に
+      // func 内に残している。count は呼び出し側 (sendItem) で事前に
       // クランプ済みの前提のため、ここでの clamp 再定義は不要。
       const sendButtonTimeoutMs = 10000;
       const sendButtonPollMs = 100;
+      const sendDelayMs = 300;
       const insufficientPointsMessage = "必要なポイントが不足しています。";
 
       type GiftItemWindow = Window & {
@@ -165,60 +165,43 @@ export const runItemSendInMainWorld = async (
         return false;
       };
 
-      // sendItem 側で clampItemSendCount / clampItemSendDelay 済みの値を前提とする。
+      // sendItem 側で clampItemSendCount 済みの値を前提とする。
       const count = sendRequest.count;
-      const delayMs = sendRequest.delayMs;
-      const query = sendRequest.label ?? sendRequest.query ?? sendRequest.itemId ?? "";
       let sent = 0;
+      let stoppedReason: string | undefined;
 
       for (let index = 0; index < count; index += 1) {
         const opened = await openGiftWindow();
 
         if (!opened) {
-          return {
-            host: pageHost,
-            query,
-            requested: count,
-            sent,
-            stoppedReason: "giftItem が見つからず、アイテム送信画面を開けませんでした"
-          };
+          stoppedReason = "giftItem が見つからず、アイテム送信画面を開けませんでした";
+          break;
         }
 
         const sendReadyState = await waitForSendReadyState();
 
         if (sendReadyState.type === "insufficient-points") {
-          return {
-            host: pageHost,
-            query,
-            requested: count,
-            sent,
-            stoppedReason: insufficientPointsMessage
-          };
+          stoppedReason = insufficientPointsMessage;
+          break;
         }
 
         if (sendReadyState.type === "timeout") {
-          return {
-            host: pageHost,
-            query,
-            requested: count,
-            sent,
-            stoppedReason: "ポイント送信ボタンが表示されませんでした"
-          };
+          stoppedReason = "ポイント送信ボタンが表示されませんでした";
+          break;
         }
 
         pressElement(sendReadyState.button);
         sent += 1;
 
         if (index < count - 1) {
-          await wait(delayMs);
+          await wait(sendDelayMs);
         }
       }
 
       return {
-        host: pageHost,
-        query,
         requested: count,
-        sent
+        sent,
+        stoppedReason
       };
     }
   });

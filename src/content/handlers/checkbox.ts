@@ -1,14 +1,10 @@
-import type { CheckboxActionResult, CheckboxRule, ExtensionMessage } from "../../extensionTypes";
+import type { CheckboxActionResult, ExtensionMessage } from "../../extensionTypes";
 import { getCheckboxState, runCheckboxAction } from "../../features/checkbox/checkboxTools";
 import { getCheckboxRule } from "../../storage";
 import type { ContentMessageHandler, ContentSendResponse } from "./types";
 
-const getCurrentCheckboxRule = async (): Promise<CheckboxRule | undefined> => {
-  return getCheckboxRule(window.location.host);
-};
-
 export const applyCheckboxRule = async (): Promise<CheckboxActionResult> => {
-  const rule = await getCurrentCheckboxRule();
+  const rule = await getCheckboxRule(window.location.host);
 
   if (!rule?.autoApply) {
     return {

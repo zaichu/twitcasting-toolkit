@@ -32,7 +32,6 @@ export const getActiveTab = async (): Promise<ActiveTab | undefined> => {
 
   return {
     id: tab.id,
-    url: tab.url,
     host: new URL(tab.url).host
   };
 };

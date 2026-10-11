@@ -8,7 +8,6 @@ import { MAX_ITEM_SEND_COUNT } from "../features/dom/domUtils";
 
 export type ActiveTab = {
   id: number;
-  url: string;
   host: string;
 };
 

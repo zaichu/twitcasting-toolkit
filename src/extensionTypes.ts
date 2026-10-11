@@ -11,11 +11,8 @@ export type ExtensionSettings = {
 };
 
 export type CheckboxState = {
-  url: string;
-  host: string;
   total: number;
   checked: number;
-  unchecked: number;
   disabled: number;
 };
 
@@ -45,24 +42,17 @@ export type PointStatus = {
 };
 
 export type ItemCandidateListResult = {
-  host: string;
   candidates: ItemCandidate[];
   pointStatus?: PointStatus;
 };
 
 export type ItemSendRequest = {
-  candidateIndex?: number;
-  label?: string;
-  query?: string;
   userId?: string;
   itemId?: string;
   count: number;
-  delayMs: number;
 };
 
 export type ItemSendResult = {
-  host: string;
-  query: string;
   requested: number;
   sent: number;
   stoppedReason?: string;

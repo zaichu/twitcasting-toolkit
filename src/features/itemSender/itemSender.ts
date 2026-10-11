@@ -5,16 +5,13 @@ import type {
 } from "../../extensionTypes";
 import { isDisabledElement } from "../dom/domUtils";
 import {
+  normalizeText,
   parseAvailablePointsFromText,
   parsePaidPointsFromText,
   parsePointRecoveryFromText
 } from "../point/pointText";
 
 const ACCOUNT_POINT_STATUS_TIMEOUT_MS = 5000;
-
-export const normalizeText = (text: string): string => {
-  return text.replace(/\s+/g, " ").trim();
-};
 
 const twitCastingItemSelector = [
   ".tw-item-list .tw-item-list-item",
@@ -46,7 +43,7 @@ const getTwitCastingItemElements = (root: ParentNode = document): HTMLElement[] 
   );
 };
 
-const getTwitCastingItemLabel = (element: HTMLElement): string => {
+export const getElementLabel = (element: HTMLElement): string => {
   const name = normalizeText(
     element.querySelector<HTMLElement>(".tw-item-list-item-name")?.textContent ??
       element.querySelector<HTMLImageElement>(".tw-item-list-item-icon")?.alt ??
@@ -61,22 +58,6 @@ const getTwitCastingItemLabel = (element: HTMLElement): string => {
   }
 
   return normalizeText([name, amount].filter(Boolean).join(" "));
-};
-
-export const getElementLabel = (element: HTMLElement): string => {
-  const twitCastingItemLabel = getTwitCastingItemLabel(element);
-
-  if (twitCastingItemLabel) {
-    return twitCastingItemLabel;
-  }
-
-  return "";
-};
-
-const getPointFromText = (text: string): number | undefined => {
-  const match = normalizeText(text).replace(/,/g, "").match(/\d+/);
-
-  return match ? Number(match[0]) : undefined;
 };
 
 const INIT_ITEM_BOX_WEB_UI_CALL = "initItemBoxWebUI(";
@@ -207,7 +188,7 @@ const getDomItemCandidates = (root: ParentNode = document): ItemCandidate[] => {
         label: getElementLabel(element),
         userId: giftItemCall?.userId,
         itemId: giftItemCall?.itemId,
-        point: getPointFromText(
+        point: getNumberFromText(
           element.querySelector<HTMLElement>(".tw-item-list-item-amount")?.textContent ?? ""
         ),
         imageUrl: getTwitCastingItemImageUrl(element)
@@ -262,7 +243,7 @@ const getNumberFromText = (text: string | undefined): number | undefined => {
 const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined => {
   const container =
     root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
-  const text = normalizeText(container?.textContent ?? "");
+  const text = container?.textContent ?? "";
   const availablePoints = parseAvailablePointsFromText(text);
   const pointRecovery = parsePointRecoveryFromText(text);
   const pointRows = Array.from(
@@ -560,7 +541,6 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
   );
 
   return {
-    host: window.location.host,
     candidates,
     pointStatus
   };

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clampItemSendCount, clampItemSendDelay } from "../dom/domUtils";
+import { clampItemSendCount } from "../dom/domUtils";
+import { normalizeText } from "../point/pointText";
 import {
   getElementLabel,
   listItemCandidates,
-  normalizeText,
   parseGiftItemCall
 } from "./itemSender";
 
@@ -20,8 +20,6 @@ describe("itemSender", () => {
     expect(normalizeText("  お茶\n  送信  ")).toBe("お茶 送信");
     expect(clampItemSendCount(0)).toBe(1);
     expect(clampItemSendCount(30)).toBe(20);
-    expect(clampItemSendDelay(100)).toBe(300);
-    expect(clampItemSendDelay(7000)).toBe(5000);
   });
 
   it("builds labels from TwitCasting item DOM", () => {
@@ -50,7 +48,6 @@ describe("itemSender", () => {
     `;
 
     expect(await listItemCandidates()).toMatchObject({
-      host: "twitcasting.tv",
       candidates: []
     });
   });
@@ -73,7 +70,6 @@ describe("itemSender", () => {
     `;
 
     expect(await listItemCandidates()).toMatchObject({
-      host: "twitcasting.tv",
       candidates: [
         { index: 0, label: "コンティニューコイン 50" },
         { index: 1, label: "コンティニューコイン爆 250" }
@@ -113,7 +109,6 @@ describe("itemSender", () => {
     `;
 
     expect(await listItemCandidates()).toMatchObject({
-      host: "twitcasting.tv",
       candidates: [
         {
           index: 0,
@@ -184,7 +179,6 @@ describe("itemSender", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listItemCandidates()).resolves.toMatchObject({
-      host: "twitcasting.tv",
       candidates: [
         {
           index: 0,
