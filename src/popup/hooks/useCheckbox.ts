@@ -25,7 +25,7 @@ export const useCheckbox = ({ tab, setError }: UseCheckboxOptions) => {
 
   const loadCheckboxState = async (activeTab: ActiveTab) => {
     try {
-      const state = await sendToTab<CheckboxState>(activeTab.id, {
+      const state = await sendToTab(activeTab.id, {
         feature: "checkbox",
         type: "get-state"
       });
@@ -53,7 +53,7 @@ export const useCheckbox = ({ tab, setError }: UseCheckboxOptions) => {
     setError(undefined);
 
     try {
-      const result = await sendToTab<CheckboxActionResult>(tab.id, {
+      const result = await sendToTab(tab.id, {
         feature: "checkbox",
         type: "run",
         action
@@ -76,7 +76,7 @@ export const useCheckbox = ({ tab, setError }: UseCheckboxOptions) => {
 
     if (nextRule.autoApply) {
       try {
-        const result = await sendToTab<CheckboxActionResult>(tab.id, {
+        const result = await sendToTab(tab.id, {
           feature: "checkbox",
           type: "apply-rule"
         });
