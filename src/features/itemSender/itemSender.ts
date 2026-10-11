@@ -1,7 +1,6 @@
 import type {
   ItemCandidate,
   ItemCandidateListResult,
-  PointRecovery,
   PointStatus
 } from "../../extensionTypes";
 import { isDisabledElement } from "../dom/domUtils";
@@ -61,51 +60,77 @@ export const getElementLabel = (element: HTMLElement): string => {
   return normalizeText([name, amount].filter(Boolean).join(" "));
 };
 
-const getAvailablePointsFromDocument = (root: ParentNode): number | undefined => {
-  const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
+const INIT_ITEM_BOX_WEB_UI_CALL = "initItemBoxWebUI(";
 
-  return parseAvailablePointsFromText(container?.textContent ?? "");
+type EmbeddedItemBoxCall = {
+  data: EmbeddedItemBoxData;
+  userId?: string;
 };
 
-const getPointRecoveryFromDocument = (root: ParentNode): PointRecovery | undefined => {
-  const container = root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
+// initItemBoxWebUI(...) 呼び出しから設定オブジェクトの JSON と第1引数の
+// ユーザー ID を取り出す。見つからない・壊れている呼び出しは undefined を返す。
+const readEmbeddedItemBoxCall = (
+  scriptText: string,
+  initIndex: number
+): EmbeddedItemBoxCall | undefined => {
+  const openParenIndex = scriptText.indexOf("(", initIndex);
+  const firstQuoteOffset = scriptText.slice(openParenIndex + 1).search(/["']/);
+  const userId =
+    firstQuoteOffset >= 0
+      ? readQuotedStringAt(scriptText, openParenIndex + 1 + firstQuoteOffset)
+      : parsePageVariableUserId();
+  const itemsKeyIndex = scriptText.indexOf('"items"', openParenIndex);
+  const objectStartIndex = scriptText.lastIndexOf("{", itemsKeyIndex);
 
-  return parsePointRecoveryFromText(container?.textContent ?? "");
+  if (itemsKeyIndex < 0 || objectStartIndex < openParenIndex) {
+    return undefined;
+  }
+
+  const objectText = readBalancedObjectAt(scriptText, objectStartIndex);
+
+  if (!objectText) {
+    return undefined;
+  }
+
+  try {
+    return { data: JSON.parse(objectText) as EmbeddedItemBoxData, userId };
+  } catch {
+    // 埋め込みデータの JSON 解析に失敗した場合は無視する
+    return undefined;
+  }
 };
 
-const getAvailablePointsFromEmbeddedScripts = (root: Document = document): number | undefined => {
+const readEmbeddedItemBoxCalls = (root: Document): EmbeddedItemBoxCall[] => {
+  const calls: EmbeddedItemBoxCall[] = [];
+
   for (const script of Array.from(root.scripts)) {
     const scriptText = script.textContent ?? "";
     let searchFrom = 0;
 
     while (searchFrom < scriptText.length) {
-      const initIndex = scriptText.indexOf("initItemBoxWebUI(", searchFrom);
+      const initIndex = scriptText.indexOf(INIT_ITEM_BOX_WEB_UI_CALL, searchFrom);
 
       if (initIndex < 0) {
         break;
       }
 
-      const openParenIndex = scriptText.indexOf("(", initIndex);
-      const itemsKeyIndex = scriptText.indexOf('"items"', openParenIndex);
-      const objectStartIndex = scriptText.lastIndexOf("{", itemsKeyIndex);
+      const call = readEmbeddedItemBoxCall(scriptText, initIndex);
 
-      if (itemsKeyIndex >= 0 && objectStartIndex >= openParenIndex) {
-        const objectText = readBalancedObjectAt(scriptText, objectStartIndex);
-
-        if (objectText) {
-          try {
-            const data = JSON.parse(objectText) as EmbeddedItemBoxData;
-
-            if (typeof data.available_point === "number") {
-              return data.available_point;
-            }
-          } catch {
-            // 埋め込みデータの JSON 解析に失敗した場合は無視する
-          }
-        }
+      if (call) {
+        calls.push(call);
       }
 
-      searchFrom = initIndex + "initItemBoxWebUI(".length;
+      searchFrom = initIndex + INIT_ITEM_BOX_WEB_UI_CALL.length;
+    }
+  }
+
+  return calls;
+};
+
+const getAvailablePointsFromEmbeddedScripts = (root: Document = document): number | undefined => {
+  for (const call of readEmbeddedItemBoxCalls(root)) {
+    if (typeof call.data.available_point === "number") {
+      return call.data.available_point;
     }
   }
 
@@ -201,7 +226,6 @@ const getTargetUserId = (): string | undefined => {
 
 type AjaxItemListResult = {
   candidates: ItemCandidate[];
-  availablePoints?: number;
   pointStatus?: PointStatus;
 };
 
@@ -217,8 +241,11 @@ const getNumberFromText = (text: string | undefined): number | undefined => {
 };
 
 const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined => {
-  const availablePoints = getAvailablePointsFromDocument(root);
-  const pointRecovery = getPointRecoveryFromDocument(root);
+  const container =
+    root instanceof Document ? (root.body ?? root.documentElement) : (root as HTMLElement);
+  const text = container?.textContent ?? "";
+  const availablePoints = parseAvailablePointsFromText(text);
+  const pointRecovery = parsePointRecoveryFromText(text);
   const pointRows = Array.from(
     root.querySelectorAll<HTMLElement>(".tw-point-having-props-display li")
   );
@@ -336,13 +363,13 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
 
     const html = await response.text();
     const parsedDocument = new DOMParser().parseFromString(html, "text/html");
+    const parsedPointStatus = getPointStatusFromDocument(parsedDocument);
     const availablePoints =
-      getAvailablePointsFromDocument(parsedDocument) ??
-      getAvailablePointsFromEmbeddedScripts(parsedDocument);
-    const pointStatus = getPointStatusFromDocument(parsedDocument);
+      parsedPointStatus?.availablePoints ?? getAvailablePointsFromEmbeddedScripts(parsedDocument);
+    const pointStatus = mergePointStatus(parsedPointStatus, { availablePoints });
 
     if (!html.includes("tw-item-list-item")) {
-      return { candidates: [], availablePoints, pointStatus };
+      return { candidates: [], pointStatus };
     }
 
     return {
@@ -350,7 +377,6 @@ const getAjaxItemListCandidates = async (): Promise<AjaxItemListResult> => {
         ...candidate,
         index
       })),
-      availablePoints,
       pointStatus
     };
   } catch {
@@ -444,31 +470,8 @@ const readBalancedObjectAt = (source: string, startIndex: number): string | unde
   return undefined;
 };
 
-const parseEmbeddedItemBoxCandidatesFromScript = (
-  scriptText: string,
-  initIndex: number
-): ItemCandidate[] => {
-  const openParenIndex = scriptText.indexOf("(", initIndex);
-  const firstQuoteOffset = scriptText.slice(openParenIndex + 1).search(/["']/);
-  const userId =
-    firstQuoteOffset >= 0
-      ? readQuotedStringAt(scriptText, openParenIndex + 1 + firstQuoteOffset)
-      : parsePageVariableUserId();
-  const itemsKeyIndex = scriptText.indexOf('"items"', openParenIndex);
-  const objectStartIndex = scriptText.lastIndexOf("{", itemsKeyIndex);
-
-  if (!userId || itemsKeyIndex < 0 || objectStartIndex < openParenIndex) {
-    return [];
-  }
-
-  const objectText = readBalancedObjectAt(scriptText, objectStartIndex);
-
-  if (!objectText) {
-    return [];
-  }
-
+const toItemCandidates = (data: EmbeddedItemBoxData, userId: string): ItemCandidate[] => {
   try {
-    const data = JSON.parse(objectText) as EmbeddedItemBoxData;
     const items = Array.isArray(data.items) ? data.items : [];
 
     return items
@@ -500,19 +503,9 @@ const parseEmbeddedItemBoxCandidatesFromScript = (
 const getEmbeddedItemBoxCandidates = (): ItemCandidate[] => {
   const candidates: ItemCandidate[] = [];
 
-  for (const script of Array.from(document.scripts)) {
-    const scriptText = script.textContent ?? "";
-    let searchFrom = 0;
-
-    while (searchFrom < scriptText.length) {
-      const initIndex = scriptText.indexOf("initItemBoxWebUI(", searchFrom);
-
-      if (initIndex < 0) {
-        break;
-      }
-
-      candidates.push(...parseEmbeddedItemBoxCandidatesFromScript(scriptText, initIndex));
-      searchFrom = initIndex + "initItemBoxWebUI(".length;
+  for (const call of readEmbeddedItemBoxCalls(document)) {
+    if (call.userId) {
+      candidates.push(...toItemCandidates(call.data, call.userId));
     }
   }
 
@@ -537,7 +530,7 @@ export const listItemCandidates = async (): Promise<ItemCandidateListResult> => 
     document.querySelector<HTMLElement>("#tw-item-window-data") ?? document;
   const documentPointStatus = getPointStatusFromDocument(fallbackPointsRoot);
   const availablePoints =
-    ajaxResult.availablePoints ??
+    ajaxResult.pointStatus?.availablePoints ??
     documentPointStatus?.availablePoints ??
     getAvailablePointsFromEmbeddedScripts();
   const pointStatus = mergePointStatus(

@@ -141,6 +141,25 @@ describe("content router", () => {
     }
   });
 
+  it("別 feature と同名の type が来ても無視し false を返す", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const sendResponse = vi.fn();
+      const message = {
+        feature: "item-sender",
+        type: "run",
+        action: "uncheck"
+      } as unknown as ExtensionMessage;
+
+      expect(handleMessage(message, sender, sendResponse)).toBe(false);
+      expect(sendResponse).not.toHaveBeenCalled();
+      expect(runCheckboxAction).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("未知の item-sender type は無視し false を返す", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

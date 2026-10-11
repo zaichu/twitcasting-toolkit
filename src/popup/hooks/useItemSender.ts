@@ -1,7 +1,6 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import type {
   ItemCandidate,
-  ItemCandidateListResult,
   ItemSendResult,
   PointStatus
 } from "../../extensionTypes";
@@ -53,7 +52,7 @@ export const useItemSender = ({ tab, setError }: UseItemSenderOptions) => {
     }
 
     try {
-      const result = await sendToTab<ItemCandidateListResult>(currentTab.id, {
+      const result = await sendToTab(currentTab.id, {
         feature: "item-sender",
         type: "list"
       });
