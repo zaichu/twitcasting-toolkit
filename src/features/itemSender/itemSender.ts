@@ -273,7 +273,7 @@ const getPointStatusFromDocument = (root: ParentNode): PointStatus | undefined =
     pointStatus.ownedPoints = ownedPoints;
   }
 
-  if (paidPoints !== undefined && Number.isFinite(paidPoints)) {
+  if (paidPoints !== undefined) {
     pointStatus.paidPoints = paidPoints;
   }
 

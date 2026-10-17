@@ -75,9 +75,9 @@ Chrome 拡張の content script (`dist/assets/content.js`) は **classic script*
 
 ## この変更で解禁されるもの
 
-- #47 storage 直操作・定数複製の集約 → **着手可能**
-- #48 ポイント正規表現の集約 → **着手可能**
-- `src/popup/App.tsx` にある clamp 関数の複製解消 → 着手可能(#47 か #48 に含めるか、別Issueで対応)
+- #47 storage 直操作・定数複製の集約 → **済(#47 closed / PR #55)**
+- #48 ポイント正規表現の集約 → **済(#48 closed / PR #56)**
+- `src/popup/App.tsx` にある clamp 関数の複製解消 → **済(App.tsx の clamp 複製は現時点で存在しない)。ただし同種の min/max 式は `src/popup/popupHelpers.ts` の `getNextItemCountFromInput` に残る(入力文字列の解析用で、`Math.trunc` と不正値時のフォールバックを持つ別用途のため单纯的複製ではない)**
 
 ## 残るリスク・注意点
 

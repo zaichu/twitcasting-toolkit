@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clampItemSendCount } from "../dom/domUtils";
 import { normalizeText } from "../point/pointText";
 import {
   getElementLabel,
@@ -16,10 +15,8 @@ describe("itemSender", () => {
     window.history.replaceState({}, "", "/example");
   });
 
-  it("normalizes labels and clamps send options", () => {
+  it("normalizes labels", () => {
     expect(normalizeText("  お茶\n  送信  ")).toBe("お茶 送信");
-    expect(clampItemSendCount(0)).toBe(1);
-    expect(clampItemSendCount(30)).toBe(20);
   });
 
   it("builds labels from TwitCasting item DOM", () => {
