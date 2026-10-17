@@ -58,7 +58,7 @@ export const getCheckboxRule = async (host: string): Promise<CheckboxRule | unde
 export const saveCheckboxRule = async (
   host: string,
   rule: CheckboxRule
-): Promise<ExtensionSettings> => {
+): Promise<void> => {
   const settings = await getSettings();
   const nextSettings = {
     ...settings,
@@ -69,17 +69,15 @@ export const saveCheckboxRule = async (
   };
 
   await saveSettings(nextSettings);
-  return nextSettings;
 };
 
 export const savePointRecoveryNotificationEnabled = async (
   enabled: boolean
-): Promise<ExtensionSettings> => {
+): Promise<void> => {
   const settings = await getSettings();
   const nextSettings = { ...settings, pointRecoveryNotificationEnabled: enabled };
 
   await saveSettings(nextSettings);
-  return nextSettings;
 };
 
 export const isPointRecoveryNotificationEnabled = async (): Promise<boolean> => {
