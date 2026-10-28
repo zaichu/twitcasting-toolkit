@@ -16,14 +16,21 @@
 | 1 | `storage.ts` が下位レイヤー(`features/pointRecovery`)に依存し、依存方向が逆転している | `src/storage.ts:1-7`、`src/features/pointRecovery/pointRecoveryNotifier.ts:11-12` | スナップショットのキー定数・型を `features` 側が所有し、共通層の `storage.ts` がそれを import している。`pointRecovery` の変更が `storage` に波及する | 低 | `storage.ts`、`pointRecoveryNotifier.ts` とその利用箇所(`background.ts`、content 側ハンドラ) | 低(定数・型の置き場所移動のみ。`src/storage.test.ts` あり) | 依存方向の整理。以後の段階2以降の変更時の見通し改善 | 1 |
 | 2 | 拡張機能内メッセージの方式が二重化している(`feature`+`type` と `__type`) | `src/extensionTypes.ts:61-87`、`src/features/pointRecovery/pointRecoveryNotifier.ts:14-34`、`src/content/handlers/router.ts:11-40`、`src/background.ts:153-166` | popup⇔content 間は `feature`+`type` の `ExtensionMessage` で router が未知の組み合わせを拒否する設計。一方 content→background のポイント観測通知は `__type` 単軸の別方式で、background 側に専用リスナーがある。混線の実害は現状ないが、方式追加時に二箇所の規約を意識する必要がある | 低 | background のメッセージ受信部、content 側の通知送信部(`src/content/handlers/itemSender.ts:9-24`) | 中(メッセージ互換に触れる。既存テスト `router.test.ts`、`background.test.ts` あり) | 型・受信経路の一元化。将来の message 追加時の混線防止 | 2 |
 
-## 無料コイン回復通知の確認結果(実害のある欠陥なし。Issue 化しない)
+## 無料コイン回復通知の確認結果(実害のある欠陥あり。最優先で Issue 化する)
 
-確認した範囲:
+確認した範囲(時刻計算・通常時の重複防止):
 
 - 時刻計算は絶対時刻を使わない。ページ文言の相対時間(「あとX日X時間X分X秒で」)を `parseRemainingMillisecondsFromText`(`src/features/point/pointText.ts:61-83`)で ms 化し、`POINT_RECOVERY_RECHECK_BUFFER_MS`(60 秒)を足して再チェックする方式(`src/features/pointRecovery/pointRecoveryNotifier.ts:93-101`、`src/background.ts:70-80`)。日単位の表記にも対応(`REMAINING_TIME_PATTERN` に日を含む。`src/features/point/pointText.ts:10-11`)。タイムゾーン・日またぎの計算が存在しないため、該当する欠陥はない。クロックのずれがあっても再チェック時刻の前後にしか影響しない
-- 重複防止は「回復待ち→解消」の遷移検知のみ(`didPointRecoveryComplete`。`src/features/pointRecovery/pointRecoveryNotifier.ts:77-91`)で、ポイント数比較はしない。fetch 経路・popup 観測経路とも `evaluateAndPersistSnapshot`(`src/background.ts:85-99`)の単一箇所に集約し、判定→通知→保存→次回予約の順で処理する。recheck アラームは同名上書きのため二重予約にならない。watch アラームは既存があれば作らない(`ensureWatchAlarm`。`src/background.ts:134-144`)
-- 起動時(`onInstalled`/`onStartup`)は満タンなら前回比較なしで通知する意図的仕様(`src/background.ts:125-129`)で、テスト済み(`src/features/pointRecovery/pointRecoveryNotifier.test.ts:106-124`)。再起動のたびに満タン通知が出るが、仕様として許容範囲と判断し、欠陥として Issue 化しない
+- 逐次実行時の重複防止は「回復待ち→解消」の遷移検知のみ(`didPointRecoveryComplete`。`src/features/pointRecovery/pointRecoveryNotifier.ts:77-91`)で、ポイント数比較はしない。fetch 経路・popup 観測経路とも `evaluateAndPersistSnapshot`(`src/background.ts:85-99`)の単一箇所に集約し、判定→通知→保存→次回予約の順で処理する。recheck アラームは同名上書きのため二重予約にならない。watch アラームは既存があれば作らない(`ensureWatchAlarm`。`src/background.ts:134-144`)
+- 起動時(`onInstalled`/`onStartup`)は満タンなら前回比較なしで通知する意図的仕様(`src/background.ts:125-129`)で、テスト済み(`src/features/pointRecovery/pointRecoveryNotifier.test.ts:106-124`)。再起動のたびに満タン通知が出るが、仕様として許容範囲と判断する
 - 通知 ID に `Date.now()` を含めるため短時間の往復(回復→再消費→回復)では複数通知が出る(`src/background.ts:52`)。実害は小さいため触らない
+
+見つけた欠陥(同時観測による重複通知。再現条件つき):
+
+- `evaluateAndPersistSnapshot`(`src/background.ts:85-99`)は前回値の読み取り(89行目)→通知(91-94行目)→保存(97行目)の順で、各段階の間に `await`(設定読み取り・通知 API)を挟む。直列化の仕組みはない
+- 入口はアラーム経路(`src/background.ts:153-157`)と popup 観測経路(`src/background.ts:162-166`)の2つで、どちらも `void` の fire-and-forget のため同時に走りうる。アラーム経路は `fetch`(`src/background.ts:110-119`)を待つ間に譲るため、割り込みの幅は広い
+- 再現条件: 保存済みスナップショットが回復待ちの状態で、回復済みの popup 観測と watch アラームのチェックが重なると、両方が同じ「回復待ち」の前回値を読んで通知する。通知 ID が `Date.now()` のため別 ID の通知が2件作られる(逐次実行では1件)
+- 対応: この欠陥は最優先で Issue 化する(段階1の調査 PR では製品コードを変えないため、文書への記録にとどめる)
 
 ## 権限(manifest)の確認結果(削減余地なし)
 
