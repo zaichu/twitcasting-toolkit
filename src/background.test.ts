@@ -158,4 +158,16 @@ describe("background: 無料コイン回復バッジ", () => {
     });
     expect(consoleErrorSpy).toHaveBeenCalledTimes(3);
   });
+
+  it("未知のメッセージは無視し通知も保存もしない", async () => {
+    onMessageHandler({ feature: "checkbox", type: "run", action: "check" });
+    onMessageHandler({ feature: "unknown", type: "unknown" });
+    onMessageHandler({ __type: "unknown-message-type" });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(chromeMock.notifications.create).not.toHaveBeenCalled();
+    expect(chromeMock.storage.local.set).not.toHaveBeenCalled();
+    expect(chromeMock.alarms.create).not.toHaveBeenCalled();
+  });
 });

@@ -174,4 +174,23 @@ describe("content router", () => {
       warn.mockRestore();
     }
   });
+
+  it("__type 単軸のポイント観測通知は content では扱わず false を返す", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const sendResponse = vi.fn();
+      const message = {
+        __type: "twitcasting-toolkit:point-recovery-observed",
+        snapshot: { hasPendingRecovery: false, availablePoints: 100 }
+      } as unknown as ExtensionMessage;
+
+      expect(handleMessage(message, sender, sendResponse)).toBe(false);
+      expect(sendResponse).not.toHaveBeenCalled();
+      expect(listItemCandidates).not.toHaveBeenCalled();
+      expect(getCheckboxState).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
