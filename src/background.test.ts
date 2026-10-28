@@ -86,6 +86,65 @@ describe("background: 無料コイン回復バッジ", () => {
     expect(chromeMock.notifications.create).toHaveBeenCalled();
   });
 
+  it("同時観測が重なっても通知は1件だけ", async () => {
+    let stored: PointRecoverySnapshot | undefined = previousSnapshot;
+    chromeMock.storage.local.get.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return { [POINT_RECOVERY_SNAPSHOT_KEY]: stored };
+    });
+    chromeMock.storage.local.set.mockImplementation(async (storedValue) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      stored = (storedValue as Record<string, PointRecoverySnapshot>)[POINT_RECOVERY_SNAPSHOT_KEY];
+    });
+
+    const message: PointRecoveryObservedMessage = {
+      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      snapshot: currentSnapshot
+    };
+
+    onMessageHandler(message);
+    onMessageHandler(message);
+
+    await vi.waitFor(
+      () => expect(chromeMock.storage.local.set).toHaveBeenCalledTimes(2),
+      { timeout: 2000, interval: 10 }
+    );
+    expect(chromeMock.notifications.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("1回の評価が失敗しても次の評価は実行される", async () => {
+    let stored: PointRecoverySnapshot | undefined = previousSnapshot;
+    let getCalls = 0;
+    chromeMock.storage.local.get.mockImplementation(async () => {
+      getCalls += 1;
+      if (getCalls === 1) {
+        throw new Error("snapshot read failed");
+      }
+      return { [POINT_RECOVERY_SNAPSHOT_KEY]: stored };
+    });
+    chromeMock.storage.local.set.mockImplementation(async (storedValue) => {
+      stored = (storedValue as Record<string, PointRecoverySnapshot>)[POINT_RECOVERY_SNAPSHOT_KEY];
+    });
+
+    const message: PointRecoveryObservedMessage = {
+      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      snapshot: currentSnapshot
+    };
+
+    onMessageHandler(message);
+    onMessageHandler(message);
+
+    await vi.waitFor(() => expect(getCalls).toBeGreaterThanOrEqual(2), {
+      timeout: 2000,
+      interval: 10
+    });
+    await vi.waitFor(
+      () => expect(chromeMock.storage.local.set).toHaveBeenCalledTimes(1),
+      { timeout: 2000, interval: 10 }
+    );
+    expect(chromeMock.notifications.create).toHaveBeenCalledTimes(1);
+  });
+
   it("action APIが失敗しても通知作成とスナップショット保存は継続する", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     chromeMock.action.setBadgeText.mockRejectedValueOnce(new Error("badge text failed"));

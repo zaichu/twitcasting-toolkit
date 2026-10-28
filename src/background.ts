@@ -82,7 +82,7 @@ const scheduleRecheck = (snapshot: PointRecoverySnapshot): Promise<void> => {
 // 通知判定・保存・次回チェックのスケジューリングを一箇所にまとめる。
 // fetch で取得したスナップショット、popup 経由で観測されたスナップショットの
 // どちらもここを通す。
-const evaluateAndPersistSnapshot = async (
+const runEvaluation = async (
   currentSnapshot: PointRecoverySnapshot,
   options?: { alwaysNotifyIfNotPending?: boolean }
 ): Promise<void> => {
@@ -96,6 +96,23 @@ const evaluateAndPersistSnapshot = async (
 
   await savePointRecoverySnapshot(currentSnapshot);
   await scheduleRecheck(currentSnapshot);
+};
+
+// アラーム経路と popup 観測経路はどちらも投げ放しのため同時に走りうる。
+// 同じ「回復待ち」の前回値を読んで二重通知しないよう、前の評価が終わるまで
+// 次の評価を待たせる。連鎖自体は失敗を握りつぶして継続する。
+let evaluationQueue: Promise<void> = Promise.resolve();
+
+const evaluateAndPersistSnapshot = (
+  currentSnapshot: PointRecoverySnapshot,
+  options?: { alwaysNotifyIfNotPending?: boolean }
+): Promise<void> => {
+  const task = evaluationQueue.then(() => runEvaluation(currentSnapshot, options));
+  evaluationQueue = task.then(
+    () => undefined,
+    () => undefined
+  );
+  return task;
 };
 
 const checkPointRecovery = async (trigger: string): Promise<void> => {
