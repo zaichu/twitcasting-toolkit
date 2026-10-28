@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   didPointRecoveryComplete,
   getNextCheckDelayMs,
+  isPointRecoveryObservedMessage,
   parsePointRecoverySnapshotFromHtml,
+  POINT_RECOVERY_FEATURE,
+  POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+  POINT_RECOVERY_OBSERVED_TYPE,
   POINT_RECOVERY_RECHECK_BUFFER_MS,
   stripHtmlToText
 } from "./pointRecoveryNotifier";
@@ -158,5 +162,48 @@ describe("getNextCheckDelayMs", () => {
     expect(
       getNextCheckDelayMs({ hasPendingRecovery: true, remainingText: "まもなく回復" })
     ).toBeUndefined();
+  });
+});
+
+describe("isPointRecoveryObservedMessage", () => {
+  it("feature+type 形式を受け付ける", () => {
+    expect(
+      isPointRecoveryObservedMessage({
+        feature: POINT_RECOVERY_FEATURE,
+        type: POINT_RECOVERY_OBSERVED_TYPE,
+        snapshot: { hasPendingRecovery: false, availablePoints: 100 }
+      })
+    ).toBe(true);
+  });
+
+  it("旧 __type 形式も受け付ける", () => {
+    expect(
+      isPointRecoveryObservedMessage({
+        __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+        snapshot: { hasPendingRecovery: false, availablePoints: 100 }
+      })
+    ).toBe(true);
+  });
+
+  it("スナップショットが不正なら受け付けない", () => {
+    expect(
+      isPointRecoveryObservedMessage({
+        feature: POINT_RECOVERY_FEATURE,
+        type: POINT_RECOVERY_OBSERVED_TYPE,
+        snapshot: { hasPendingRecovery: "yes" }
+      })
+    ).toBe(false);
+  });
+
+  it("未知の feature+type は受け付けない", () => {
+    expect(
+      isPointRecoveryObservedMessage({
+        feature: "checkbox",
+        type: "run",
+        snapshot: { hasPendingRecovery: false }
+      })
+    ).toBe(false);
+    expect(isPointRecoveryObservedMessage({ __type: "unknown" })).toBe(false);
+    expect(isPointRecoveryObservedMessage(undefined)).toBe(false);
   });
 });
