@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   didPointRecoveryComplete,
   getNextCheckDelayMs,
-  isPointRecoverySnapshot,
   parsePointRecoverySnapshotFromHtml,
   POINT_RECOVERY_RECHECK_BUFFER_MS,
   stripHtmlToText
 } from "./pointRecoveryNotifier";
+import { isPointRecoverySnapshot } from "../../extensionTypes";
 import { parseRemainingMillisecondsFromText } from "../point/pointText";
 
 describe("stripHtmlToText", () => {

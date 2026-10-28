@@ -92,3 +92,26 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   checkboxRules: {},
   pointRecoveryNotificationEnabled: true
 };
+
+export type PointRecoverySnapshot = {
+  availablePoints?: number;
+  hasPendingRecovery: boolean;
+  remainingText?: string;
+};
+
+export const POINT_RECOVERY_LOGGED_IN_USER_ID_KEY = "twitCastingToolkitLoggedInUserId";
+export const POINT_RECOVERY_SNAPSHOT_KEY = "twitCastingToolkitPointRecoverySnapshot";
+
+export const isPointRecoverySnapshot = (value: unknown): value is PointRecoverySnapshot => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const snapshot = value as Partial<PointRecoverySnapshot>;
+
+  return (
+    typeof snapshot.hasPendingRecovery === "boolean" &&
+    (snapshot.availablePoints === undefined || typeof snapshot.availablePoints === "number") &&
+    (snapshot.remainingText === undefined || typeof snapshot.remainingText === "string")
+  );
+};

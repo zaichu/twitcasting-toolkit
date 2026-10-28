@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SETTINGS_KEY } from "./extensionTypes";
 import {
   POINT_RECOVERY_LOGGED_IN_USER_ID_KEY,
-  POINT_RECOVERY_SNAPSHOT_KEY
-} from "./features/pointRecovery/pointRecoveryNotifier";
+  POINT_RECOVERY_SNAPSHOT_KEY,
+  SETTINGS_KEY
+} from "./extensionTypes";
 import {
   getPointRecoverySnapshot,
   getStoredLoggedInUserId,
@@ -83,6 +83,13 @@ describe("storage Facade", () => {
         [SETTINGS_KEY]: { pointRecoveryNotificationEnabled: false }
       });
       await expect(isPointRecoveryNotificationEnabled()).resolves.toBe(false);
+    });
+  });
+
+  describe("point recovery storage keys", () => {
+    it("キー文字列を変えない", () => {
+      expect(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY).toBe("twitCastingToolkitLoggedInUserId");
+      expect(POINT_RECOVERY_SNAPSHOT_KEY).toBe("twitCastingToolkitPointRecoverySnapshot");
     });
   });
 

@@ -1,3 +1,4 @@
+import type { PointRecoverySnapshot } from "./extensionTypes";
 import {
   didPointRecoveryComplete,
   getNextCheckDelayMs,
@@ -5,8 +6,7 @@ import {
   parsePointRecoverySnapshotFromHtml,
   POINT_RECOVERY_RECHECK_ALARM_NAME,
   POINT_RECOVERY_WATCH_ALARM_NAME,
-  POINT_RECOVERY_WATCH_INTERVAL_MINUTES,
-  PointRecoverySnapshot
+  POINT_RECOVERY_WATCH_INTERVAL_MINUTES
 } from "./features/pointRecovery/pointRecoveryNotifier";
 import {
   getPointRecoverySnapshot,

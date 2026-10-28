@@ -1,15 +1,10 @@
-export type PointRecoverySnapshot = {
-  availablePoints?: number;
-  hasPendingRecovery: boolean;
-  remainingText?: string;
-};
+import type { PointRecoverySnapshot } from "../../extensionTypes";
+import { isPointRecoverySnapshot } from "../../extensionTypes";
 
 export const POINT_RECOVERY_WATCH_ALARM_NAME = "twitcasting-toolkit:point-recovery-watch";
 export const POINT_RECOVERY_RECHECK_ALARM_NAME = "twitcasting-toolkit:point-recovery-recheck";
 export const POINT_RECOVERY_WATCH_INTERVAL_MINUTES = 30;
 export const POINT_RECOVERY_RECHECK_BUFFER_MS = 60_000;
-export const POINT_RECOVERY_LOGGED_IN_USER_ID_KEY = "twitCastingToolkitLoggedInUserId";
-export const POINT_RECOVERY_SNAPSHOT_KEY = "twitCastingToolkitPointRecoverySnapshot";
 
 export const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
 
@@ -58,20 +53,6 @@ export const parsePointRecoverySnapshotFromHtml = (html: string): PointRecoveryS
     hasPendingRecovery: remainingText !== undefined,
     remainingText
   };
-};
-
-export const isPointRecoverySnapshot = (value: unknown): value is PointRecoverySnapshot => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const snapshot = value as Partial<PointRecoverySnapshot>;
-
-  return (
-    typeof snapshot.hasPendingRecovery === "boolean" &&
-    (snapshot.availablePoints === undefined || typeof snapshot.availablePoints === "number") &&
-    (snapshot.remainingText === undefined || typeof snapshot.remainingText === "string")
-  );
 };
 
 export const didPointRecoveryComplete = (
