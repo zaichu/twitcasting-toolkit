@@ -113,7 +113,7 @@ describe("content router", () => {
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith(listResult));
     expect(listItemCandidates).toHaveBeenCalledTimes(1);
     expect(chromeMock.runtime.sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ __type: "twitcasting-toolkit:point-recovery-observed" })
+      expect.objectContaining({ feature: "point-recovery", type: "observed" })
     );
   });
 
@@ -175,7 +175,26 @@ describe("content router", () => {
     }
   });
 
-  it("__type 単軸のポイント観測通知は content では扱わず false を返す", () => {
+  it("feature+type 形式のポイント観測通知も content では扱わず false を返す", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const sendResponse = vi.fn();
+      const message = {
+        feature: "point-recovery",
+        type: "observed",
+        snapshot: { hasPendingRecovery: false, availablePoints: 100 }
+      } as unknown as ExtensionMessage;
+
+      expect(handleMessage(message, sender, sendResponse)).toBe(false);
+      expect(sendResponse).not.toHaveBeenCalled();
+      expect(listItemCandidates).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("__type 単軸の旧形式も content では扱わず false を返す", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const sendResponse = vi.fn();

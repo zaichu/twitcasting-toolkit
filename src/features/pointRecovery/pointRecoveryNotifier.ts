@@ -6,9 +6,18 @@ export const POINT_RECOVERY_RECHECK_ALARM_NAME = "twitcasting-toolkit:point-reco
 export const POINT_RECOVERY_WATCH_INTERVAL_MINUTES = 30;
 export const POINT_RECOVERY_RECHECK_BUFFER_MS = 60_000;
 
+export const POINT_RECOVERY_FEATURE = "point-recovery";
+export const POINT_RECOVERY_OBSERVED_TYPE = "observed";
+
 export const POINT_RECOVERY_OBSERVED_MESSAGE_TYPE = "twitcasting-toolkit:point-recovery-observed";
 
 export type PointRecoveryObservedMessage = {
+  feature: typeof POINT_RECOVERY_FEATURE;
+  type: typeof POINT_RECOVERY_OBSERVED_TYPE;
+  snapshot: PointRecoverySnapshot;
+};
+
+type LegacyPointRecoveryObservedMessage = {
   __type: typeof POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
   snapshot: PointRecoverySnapshot;
 };
@@ -20,12 +29,17 @@ export const isPointRecoveryObservedMessage = (
     return false;
   }
 
-  const message = value as Partial<PointRecoveryObservedMessage>;
+  const message = value as Partial<PointRecoveryObservedMessage & LegacyPointRecoveryObservedMessage>;
 
-  return (
-    message.__type === POINT_RECOVERY_OBSERVED_MESSAGE_TYPE &&
-    isPointRecoverySnapshot(message.snapshot)
-  );
+  if (!isPointRecoverySnapshot(message.snapshot)) {
+    return false;
+  }
+
+  if (message.feature === POINT_RECOVERY_FEATURE && message.type === POINT_RECOVERY_OBSERVED_TYPE) {
+    return true;
+  }
+
+  return message.__type === POINT_RECOVERY_OBSERVED_MESSAGE_TYPE;
 };
 
 import {

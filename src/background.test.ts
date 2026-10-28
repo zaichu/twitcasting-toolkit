@@ -1,6 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  POINT_RECOVERY_FEATURE,
   POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+  POINT_RECOVERY_OBSERVED_TYPE,
   PointRecoveryObservedMessage
 } from "./features/pointRecovery/pointRecoveryNotifier";
 import { POINT_RECOVERY_SNAPSHOT_KEY, PointRecoverySnapshot } from "./extensionTypes";
@@ -45,7 +47,8 @@ const currentSnapshot: PointRecoverySnapshot = { hasPendingRecovery: false, avai
 
 const dispatchRecoveryObserved = async (): Promise<void> => {
   const message: PointRecoveryObservedMessage = {
-    __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+    feature: POINT_RECOVERY_FEATURE,
+    type: POINT_RECOVERY_OBSERVED_TYPE,
     snapshot: currentSnapshot
   };
 
@@ -97,7 +100,8 @@ describe("background: 無料コイン回復バッジ", () => {
     });
 
     const message: PointRecoveryObservedMessage = {
-      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      feature: POINT_RECOVERY_FEATURE,
+      type: POINT_RECOVERY_OBSERVED_TYPE,
       snapshot: currentSnapshot
     };
 
@@ -126,7 +130,8 @@ describe("background: 無料コイン回復バッジ", () => {
     });
 
     const message: PointRecoveryObservedMessage = {
-      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      feature: POINT_RECOVERY_FEATURE,
+      type: POINT_RECOVERY_OBSERVED_TYPE,
       snapshot: currentSnapshot
     };
 
@@ -169,5 +174,15 @@ describe("background: 無料コイン回復バッジ", () => {
     expect(chromeMock.notifications.create).not.toHaveBeenCalled();
     expect(chromeMock.storage.local.set).not.toHaveBeenCalled();
     expect(chromeMock.alarms.create).not.toHaveBeenCalled();
+  });
+
+  it("旧形式の __type 通知も受け付ける", async () => {
+    onMessageHandler({
+      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      snapshot: currentSnapshot
+    });
+
+    await vi.waitFor(() => expect(chromeMock.storage.local.set).toHaveBeenCalled());
+    expect(chromeMock.notifications.create).toHaveBeenCalledTimes(1);
   });
 });

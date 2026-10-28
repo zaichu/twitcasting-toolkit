@@ -1,5 +1,8 @@
 import type { ItemCandidateListResult } from "../../extensionTypes";
-import { POINT_RECOVERY_OBSERVED_MESSAGE_TYPE } from "../../features/pointRecovery/pointRecoveryNotifier";
+import {
+  POINT_RECOVERY_FEATURE,
+  POINT_RECOVERY_OBSERVED_TYPE
+} from "../../features/pointRecovery/pointRecoveryNotifier";
 import { listItemCandidates } from "../../features/itemSender/itemSender";
 import type { ContentMessageHandler } from "./types";
 
@@ -11,7 +14,8 @@ const notifyBackgroundOfPointRecovery = (result: ItemCandidateListResult): void 
 
   chrome.runtime
     .sendMessage({
-      __type: POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
+      feature: POINT_RECOVERY_FEATURE,
+      type: POINT_RECOVERY_OBSERVED_TYPE,
       snapshot: {
         availablePoints: result.pointStatus?.availablePoints,
         hasPendingRecovery: pointRecovery !== undefined,
