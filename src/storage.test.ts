@@ -86,6 +86,13 @@ describe("storage Facade", () => {
     });
   });
 
+  describe("point recovery storage keys", () => {
+    it("キー文字列を変えない", () => {
+      expect(POINT_RECOVERY_LOGGED_IN_USER_ID_KEY).toBe("twitCastingToolkitLoggedInUserId");
+      expect(POINT_RECOVERY_SNAPSHOT_KEY).toBe("twitCastingToolkitPointRecoverySnapshot");
+    });
+  });
+
   describe("logged-in user id", () => {
     it("空でない文字列だけ返す", async () => {
       chromeMock.storage.local.get.mockResolvedValue({
