@@ -1,10 +1,13 @@
-import { CheckboxRule, DEFAULT_SETTINGS, ExtensionSettings, SETTINGS_KEY } from "./extensionTypes";
 import {
+  CheckboxRule,
+  DEFAULT_SETTINGS,
+  ExtensionSettings,
   isPointRecoverySnapshot,
   POINT_RECOVERY_LOGGED_IN_USER_ID_KEY,
   POINT_RECOVERY_SNAPSHOT_KEY,
-  PointRecoverySnapshot
-} from "./features/pointRecovery/pointRecoveryNotifier";
+  PointRecoverySnapshot,
+  SETTINGS_KEY
+} from "./extensionTypes";
 
 export const isCheckboxRule = (value: unknown): value is CheckboxRule => {
   if (!value || typeof value !== "object") {

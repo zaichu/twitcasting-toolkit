@@ -1,10 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   POINT_RECOVERY_OBSERVED_MESSAGE_TYPE,
-  POINT_RECOVERY_SNAPSHOT_KEY,
-  PointRecoveryObservedMessage,
-  PointRecoverySnapshot
+  PointRecoveryObservedMessage
 } from "./features/pointRecovery/pointRecoveryNotifier";
+import { POINT_RECOVERY_SNAPSHOT_KEY, PointRecoverySnapshot } from "./extensionTypes";
 
 const chromeMock = {
   runtime: {
